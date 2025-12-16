@@ -1,6 +1,7 @@
 using Toybox.Application;
 using Toybox.Lang;
 using Toybox.WatchUi;
+using Toybox.Communications;
 
 class G365CalendarApp extends Application.AppBase {
 
