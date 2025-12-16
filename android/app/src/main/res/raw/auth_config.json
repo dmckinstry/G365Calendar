@@ -1,0 +1,16 @@
+{
+  "client_id": "YOUR_CLIENT_ID_HERE",
+  "authorization_user_agent": "DEFAULT",
+  "redirect_uri": "msauth://com.g365calendar/YOUR_SIGNATURE_HASH",
+  "account_mode": "SINGLE",
+  "broker_redirect_uri_registered": true,
+  "authorities": [
+    {
+      "type": "AAD",
+      "audience": {
+        "type": "AzureADandPersonalMicrosoftAccount",
+        "tenant_id": "common"
+      }
+    }
+  ]
+}
