@@ -1,0 +1,8 @@
+# Jungle file for Connect IQ project
+project.manifest = manifest.xml
+
+# Source files
+source.path = source
+
+# Resources
+resource.path = resources

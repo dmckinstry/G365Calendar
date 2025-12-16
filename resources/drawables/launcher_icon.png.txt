@@ -1,0 +1,2 @@
+# This is a placeholder. Replace with actual PNG icon (64x64 or 80x80 pixels)
+# For now, use any calendar icon PNG file named launcher_icon.png

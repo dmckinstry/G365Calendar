@@ -1,0 +1,28 @@
+# Garmin Connect IQ
+bin/
+.store/
+.keys/
+
+# Android
+android/.gradle/
+android/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Credentials
+*.key
+*.der
+oauth_token.txt

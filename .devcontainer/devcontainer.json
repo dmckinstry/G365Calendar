@@ -1,0 +1,26 @@
+{
+  "name": "G365Calendar Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/java:21",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "garmin.monkey-c",
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteEnv": {
+    "MB_HOME": "/opt/connectiq-sdk",
+    "ANDROID_HOME": "/opt/android-sdk",
+    "PATH": "${containerEnv:PATH}:/opt/connectiq-sdk/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools"
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/.keys,target=/workspace/.keys,type=bind,consistency=cached"
+  ]
+}
