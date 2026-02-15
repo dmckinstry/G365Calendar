@@ -1,0 +1,7 @@
+# Jungle file for G365Calendar Garmin app
+project.manifest = manifest.xml
+
+# Device-specific resources can override defaults
+# venu2.resourcePath = $(venu2.resourcePath);resources-venu2
+# venu3.resourcePath = $(venu3.resourcePath);resources-venu3
+# venu4.resourcePath = $(venu4.resourcePath);resources-venu4

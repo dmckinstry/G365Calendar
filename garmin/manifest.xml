@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq"
+    version="5">
+
+    <iq:application
+        id="g365-calendar-app"
+        type="watch-app"
+        name="@Strings.AppName"
+        entry="G365CalendarApp"
+        launcherIcon="@Drawables.LauncherIcon"
+        minApiLevel="4.0.0">
+
+        <iq:permissions>
+            <iq:uses-permission id="Communications" />
+        </iq:permissions>
+
+        <iq:languages>
+            <iq:language>eng</iq:language>
+        </iq:languages>
+
+        <iq:devices>
+            <!-- Venu 2 series -->
+            <iq:device id="venu2" />
+            <iq:device id="venu2s" />
+            <iq:device id="venu2plus" />
+
+            <!-- Venu 3 series -->
+            <iq:device id="venu3" />
+            <iq:device id="venu3s" />
+
+            <!-- Venu 4 series (verify device IDs when SDK support is available) -->
+            <iq:device id="venu4" />
+            <iq:device id="venu4s" />
+        </iq:devices>
+
+    </iq:application>
+
+</iq:manifest>

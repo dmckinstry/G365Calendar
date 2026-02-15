@@ -1,0 +1,74 @@
+name: Garmin Connect IQ CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'garmin/**'
+      - '.github/workflows/garmin-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'garmin/**'
+      - '.github/workflows/garmin-ci.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest.xml
+        run: |
+          echo "Validating Garmin Connect IQ manifest..."
+          # Check manifest.xml is valid XML
+          python3 -c "
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('garmin/manifest.xml')
+          root = tree.getroot()
+          print('Manifest XML is valid')
+
+          # Verify required elements exist
+          ns = {'iq': 'http://www.garmin.com/xml/connectiq'}
+          app = root.find('.//iq:application', ns)
+          assert app is not None, 'Missing application element'
+          assert app.get('type') == 'watch-app', 'Expected watch-app type'
+
+          devices = root.findall('.//iq:device', ns)
+          print(f'Found {len(devices)} target devices')
+          for d in devices:
+              print(f'  - {d.get(\"id\")}')
+          "
+
+      - name: Validate Monkey C source files
+        run: |
+          echo "Checking Monkey C source files..."
+          for f in garmin/source/*.mc; do
+            echo "  ✓ $(basename $f)"
+          done
+
+      - name: Validate resource files
+        run: |
+          echo "Checking resource files..."
+          python3 -c "
+          import xml.etree.ElementTree as ET
+          for f in ['garmin/resources/strings/strings.xml',
+                     'garmin/resources/drawables/drawables.xml',
+                     'garmin/resources/layouts/main_layout.xml']:
+              ET.parse(f)
+              print(f'  ✓ {f} is valid XML')
+          "
+
+  # Build job requires Connect IQ SDK — enable when SDK is available in CI
+  # build:
+  #   runs-on: ubuntu-latest
+  #   needs: validate
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Connect IQ SDK
+  #       run: |
+  #         # Download and install Connect IQ SDK
+  #         echo "TODO: Set up Connect IQ SDK in CI"
+  #     - name: Build for Venu 2
+  #       run: monkeyc -f garmin/monkey.jungle -d venu2 -o garmin/bin/G365Calendar-venu2.prg
