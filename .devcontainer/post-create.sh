@@ -111,7 +111,7 @@ echo "Environment setup complete!"
 echo "============================================"
 echo ""
 echo "Java:        $(java -version 2>&1 | head -1)"
-echo "JAVA_HOME:   ${JAVA_HOME:-/usr/lib/jvm/msopenjdk-17}"
+echo "JAVA_HOME:   ${JAVA_HOME:-/usr/lib/jvm/msopenjdk-current}"
 echo "ANDROID_HOME:/opt/android-sdk"
 
 if command -v monkeyc &>/dev/null; then
