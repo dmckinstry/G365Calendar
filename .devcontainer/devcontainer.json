@@ -2,11 +2,9 @@
   "name": "G365Calendar Dev Container",
   "image": "mcr.microsoft.com/devcontainers/java:17",
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts"
-    }
+      "ghcr.io/devcontainers/features/git:1": {},
+      "ghcr.io/devcontainers/features/github-cli:1": {},
+      "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "customizations": {
     "vscode": {
@@ -20,17 +18,17 @@
         "java.configuration.runtimes": [
           {
             "name": "JavaSE-17",
-            "path": "/usr/lib/jvm/msopenjdk-17",
+            "path": "/usr/lib/jvm/msopenjdk-current",
             "default": true
           }
         ],
-        "java.import.gradle.java.home": "/usr/lib/jvm/msopenjdk-17"
+        "java.import.gradle.java.home": "/usr/lib/jvm/msopenjdk-current"
       }
     }
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteEnv": {
-    "JAVA_HOME": "/usr/lib/jvm/msopenjdk-17",
+    "JAVA_HOME": "/usr/lib/jvm/msopenjdk-current",
     "ANDROID_HOME": "/opt/android-sdk",
     "ANDROID_SDK_ROOT": "/opt/android-sdk",
     "CONNECTIQ_HOME": "/opt/connectiq-sdk",
