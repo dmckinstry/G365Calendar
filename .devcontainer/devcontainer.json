@@ -28,6 +28,8 @@
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteEnv": {
+    "DISPLAY": "127.0.0.1:0",
+    "LIBGL_ALWAYS_INDIRECT": "1",
     "JAVA_HOME": "/usr/lib/jvm/msopenjdk-current",
     "ANDROID_HOME": "/opt/android-sdk",
     "ANDROID_SDK_ROOT": "/opt/android-sdk",

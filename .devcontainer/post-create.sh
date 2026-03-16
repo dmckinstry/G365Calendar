@@ -8,8 +8,27 @@ echo "============================================"
 # -----------------------------------------------------------
 # 1. System packages
 # -----------------------------------------------------------
+echo ""
+echo ">>> Performing system updates"
 sudo apt-get update -qq
-sudo apt-get install -y -qq wget unzip
+sudo apt-get install -y -qq wget unzip xauth x11-apps libx11-dev chromium openssh-server
+
+echo ""
+echo ">>> Configuring Chromium for containerized X11 usage..."
+sudo tee /usr/local/bin/chromium >/dev/null << 'CHROMIUM_WRAPPER_EOF'
+#!/bin/sh
+PROFILE_DIR="${CHROME_USER_DATA_DIR:-/tmp/chromium-codespace-profile}"
+mkdir -p "$PROFILE_DIR"
+
+exec /usr/bin/chromium \
+    --no-sandbox \
+    --disable-setuid-sandbox \
+    --disable-dev-shm-usage \
+    --ozone-platform=x11 \
+    --user-data-dir="$PROFILE_DIR" \
+    "$@"
+CHROMIUM_WRAPPER_EOF
+sudo chmod 755 /usr/local/bin/chromium
 
 # -----------------------------------------------------------
 # 2. Android SDK
@@ -119,6 +138,10 @@ if command -v monkeyc &>/dev/null; then
 else
     echo "Connect IQ:  not installed (see instructions above)"
 fi
+
+echo "***Ensure your SSH Reverse Tunnel is option!***"
+echo "Run the following on your Windows machine:"
+echo "  gh codespace ssh -c shiny-happiness-97xwx5q6pq939v65 -- -R 6000:127.0.0.1:6000"
 
 echo ""
 echo "Quick start:"
