@@ -25,6 +25,17 @@ done
 
 APP_HOME=$( cd -P "${APP_HOME:-./}" > /dev/null && pwd -P ) || exit
 
+# Detect the OS
+cygwin=false
+darwin=false
+nonstop=false
+case "$( uname )" in
+  CYGWIN* )         cygwin=true  ;;
+  Darwin* )         darwin=true  ;;
+  MINGW* )          cygwin=true  ;;
+  NONSTOP* )        nonstop=true ;;
+esac
+
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD=maximum
 
