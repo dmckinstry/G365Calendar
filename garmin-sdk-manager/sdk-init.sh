@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SDK_VERSION="8.1.1"
+SDK_VERSION="9.2.0"
 MANIFEST_FILE="manifest.xml"
 
 echo "🔧 Checking if SDK Manager CLI is installed..."

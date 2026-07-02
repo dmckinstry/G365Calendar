@@ -28,7 +28,7 @@
             <iq:device id="venu3" />
             <iq:device id="venu3s" />
 
-            <!-- Venu 4 series (verify device IDs when SDK support is available) -->
+            <!-- Venu 4 series -->
             <iq:device id="venu4" />
             <iq:device id="venu4s" />
         </iq:devices>
