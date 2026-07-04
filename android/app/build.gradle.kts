@@ -44,6 +44,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -69,7 +70,11 @@ dependencies {
     debugImplementation(libs.compose.ui.test.manifest)
 
     // MSAL
-    implementation(libs.msal)
+    implementation(libs.msal) {
+        // `display-mask` is resolved from a private Azure feed in some MSAL transitive chains.
+        // Exclude it to keep builds reproducible without Azure Artifacts credentials.
+        exclude(group = "com.microsoft.device.display", module = "display-mask")
+    }
 
     // Networking
     implementation(libs.retrofit)
