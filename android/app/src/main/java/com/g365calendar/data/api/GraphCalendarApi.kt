@@ -8,7 +8,6 @@ import retrofit2.http.Query
 
 /** Retrofit interface for Microsoft Graph Calendar API endpoints. */
 interface GraphCalendarApi {
-
     @GET("me/calendars")
     suspend fun getCalendars(): CalendarListResponse
 

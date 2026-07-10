@@ -16,41 +16,43 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
-class CalendarSelectionViewModel @Inject constructor(
-    private val calendarRepository: CalendarRepository,
-    private val calendarPreferences: CalendarPreferences,
-) : ViewModel() {
+class CalendarSelectionViewModel
+    @Inject
+    constructor(
+        private val calendarRepository: CalendarRepository,
+        private val calendarPreferences: CalendarPreferences,
+    ) : ViewModel() {
+        private val _calendars = MutableStateFlow<List<Calendar>>(emptyList())
+        val calendars: StateFlow<List<Calendar>> = _calendars.asStateFlow()
 
-    private val _calendars = MutableStateFlow<List<Calendar>>(emptyList())
-    val calendars: StateFlow<List<Calendar>> = _calendars.asStateFlow()
+        private val _isLoading = MutableStateFlow(false)
+        val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+        private val _error = MutableStateFlow<String?>(null)
+        val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+        val selectedCalendarIds: StateFlow<Set<String>> =
+            calendarPreferences.selectedCalendarIds
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val selectedCalendarIds: StateFlow<Set<String>> = calendarPreferences.selectedCalendarIds
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        fun loadCalendars() {
+            viewModelScope.launch {
+                _isLoading.value = true
+                _error.value = null
+                try {
+                    _calendars.value = calendarRepository.getCalendars()
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to load calendars")
+                    _error.value = e.message ?: "Failed to load calendars"
+                } finally {
+                    _isLoading.value = false
+                }
+            }
+        }
 
-    fun loadCalendars() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                _calendars.value = calendarRepository.getCalendars()
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to load calendars")
-                _error.value = e.message ?: "Failed to load calendars"
-            } finally {
-                _isLoading.value = false
+        fun toggleCalendar(calendarId: String) {
+            viewModelScope.launch {
+                calendarPreferences.toggleCalendar(calendarId)
             }
         }
     }
-
-    fun toggleCalendar(calendarId: String) {
-        viewModelScope.launch {
-            calendarPreferences.toggleCalendar(calendarId)
-        }
-    }
-}

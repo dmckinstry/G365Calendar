@@ -29,9 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.g365calendar.data.model.Calendar
 
 @Composable
-fun CalendarSelectionScreen(
-    viewModel: CalendarSelectionViewModel = hiltViewModel(),
-) {
+fun calendarSelectionScreen(viewModel: CalendarSelectionViewModel = hiltViewModel()) {
     val calendars by viewModel.calendars.collectAsState()
     val selectedIds by viewModel.selectedCalendarIds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -63,7 +61,7 @@ fun CalendarSelectionScreen(
             else -> {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     items(calendars, key = { it.id }) { calendar ->
-                        CalendarRow(
+                        calendarRow(
                             calendar = calendar,
                             isSelected = calendar.id in selectedIds,
                             onToggle = { viewModel.toggleCalendar(calendar.id) },
@@ -76,7 +74,7 @@ fun CalendarSelectionScreen(
 }
 
 @Composable
-private fun CalendarRow(
+private fun calendarRow(
     calendar: Calendar,
     isSelected: Boolean,
     onToggle: () -> Unit,
@@ -90,11 +88,12 @@ private fun CalendarRow(
         val colorValue = calendar.hexColor?.let { parseHexColor(it) }
         if (colorValue != null) {
             Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(colorValue)
-                    .padding(end = 8.dp),
+                modifier =
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(colorValue)
+                        .padding(end = 8.dp),
             )
         }
 

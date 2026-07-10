@@ -17,83 +17,88 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
-class MainViewModel @Inject constructor(
-    private val authManager: AuthManager,
-    private val authState: AuthState,
-    private val syncManager: SyncManager,
-    private val syncScheduler: SyncScheduler,
-) : ViewModel() {
+class MainViewModel
+    @Inject
+    constructor(
+        private val authManager: AuthManager,
+        private val authState: AuthState,
+        private val syncManager: SyncManager,
+        private val syncScheduler: SyncScheduler,
+    ) : ViewModel() {
+        val authStatus: StateFlow<AuthState.Status> = authState.state
 
-    val authStatus: StateFlow<AuthState.Status> = authState.state
+        private val _syncStatus = MutableStateFlow<SyncUiState>(SyncUiState.Idle)
+        val syncStatus: StateFlow<SyncUiState> = _syncStatus.asStateFlow()
 
-    private val _syncStatus = MutableStateFlow<SyncUiState>(SyncUiState.Idle)
-    val syncStatus: StateFlow<SyncUiState> = _syncStatus.asStateFlow()
+        private val _lastSyncTime = MutableStateFlow<Long?>(null)
+        val lastSyncTime: StateFlow<Long?> = _lastSyncTime.asStateFlow()
 
-    private val _lastSyncTime = MutableStateFlow<Long?>(null)
-    val lastSyncTime: StateFlow<Long?> = _lastSyncTime.asStateFlow()
-
-    init {
-        checkAuthStatus()
-    }
-
-    private fun checkAuthStatus() {
-        viewModelScope.launch {
-            authState.setLoading()
-            val result = authManager.acquireTokenSilently()
-            if (result != null) {
-                authState.setAuthenticated(result.account?.username)
-                syncScheduler.schedulePeriodicSync()
-            } else {
-                authState.setUnauthenticated()
-            }
+        init {
+            checkAuthStatus()
         }
-    }
 
-    fun signIn(activity: Activity) {
-        viewModelScope.launch {
-            authState.setLoading()
-            try {
-                val result = authManager.acquireTokenInteractively(activity)
-                authState.setAuthenticated(result.account?.username)
-                syncScheduler.schedulePeriodicSync()
-                triggerSync()
-            } catch (e: Exception) {
-                Timber.e(e, "Sign in failed")
-                authState.setError(e.message ?: "Sign in failed")
-            }
-        }
-    }
-
-    fun signOut() {
-        viewModelScope.launch {
-            authManager.signOut()
-            authState.setUnauthenticated()
-            syncScheduler.cancelPeriodicSync()
-            _syncStatus.value = SyncUiState.Idle
-            _lastSyncTime.value = null
-        }
-    }
-
-    fun triggerSync() {
-        viewModelScope.launch {
-            _syncStatus.value = SyncUiState.Syncing
-            val result = syncManager.performSync()
-            _syncStatus.value = when (result) {
-                is SyncResult.Success -> {
-                    _lastSyncTime.value = System.currentTimeMillis()
-                    SyncUiState.Success(result.eventCount)
+        private fun checkAuthStatus() {
+            viewModelScope.launch {
+                authState.setLoading()
+                val result = authManager.acquireTokenSilently()
+                if (result != null) {
+                    authState.setAuthenticated(result.account?.username)
+                    syncScheduler.schedulePeriodicSync()
+                } else {
+                    authState.setUnauthenticated()
                 }
-                is SyncResult.NoCalendarsSelected -> SyncUiState.Error("No calendars selected")
-                is SyncResult.WatchNotConnected -> SyncUiState.Error("Watch not connected")
-                is SyncResult.Error -> SyncUiState.Error(result.message)
+            }
+        }
+
+        fun signIn(activity: Activity) {
+            viewModelScope.launch {
+                authState.setLoading()
+                try {
+                    val result = authManager.acquireTokenInteractively(activity)
+                    authState.setAuthenticated(result.account?.username)
+                    syncScheduler.schedulePeriodicSync()
+                    triggerSync()
+                } catch (e: Exception) {
+                    Timber.e(e, "Sign in failed")
+                    authState.setError(e.message ?: "Sign in failed")
+                }
+            }
+        }
+
+        fun signOut() {
+            viewModelScope.launch {
+                authManager.signOut()
+                authState.setUnauthenticated()
+                syncScheduler.cancelPeriodicSync()
+                _syncStatus.value = SyncUiState.Idle
+                _lastSyncTime.value = null
+            }
+        }
+
+        fun triggerSync() {
+            viewModelScope.launch {
+                _syncStatus.value = SyncUiState.Syncing
+                val result = syncManager.performSync()
+                _syncStatus.value =
+                    when (result) {
+                        is SyncResult.Success -> {
+                            _lastSyncTime.value = System.currentTimeMillis()
+                            SyncUiState.Success(result.eventCount)
+                        }
+                        is SyncResult.NoCalendarsSelected -> SyncUiState.Error("No calendars selected")
+                        is SyncResult.WatchNotConnected -> SyncUiState.Error("Watch not connected")
+                        is SyncResult.Error -> SyncUiState.Error(result.message)
+                    }
             }
         }
     }
-}
 
 sealed class SyncUiState {
     data object Idle : SyncUiState()
+
     data object Syncing : SyncUiState()
+
     data class Success(val eventCount: Int) : SyncUiState()
+
     data class Error(val message: String) : SyncUiState()
 }

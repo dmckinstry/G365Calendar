@@ -3,6 +3,13 @@
 # MSAL
 -keep class com.microsoft.identity.** { *; }
 -dontwarn com.microsoft.identity.**
+-dontwarn com.google.auto.value.AutoValue
+-dontwarn com.google.crypto.tink.subtle.Ed25519Sign$KeyPair
+-dontwarn com.google.crypto.tink.subtle.Ed25519Sign
+-dontwarn com.google.crypto.tink.subtle.Ed25519Verify
+-dontwarn com.google.crypto.tink.subtle.X25519
+-dontwarn com.google.crypto.tink.subtle.XChaCha20Poly1305
+-dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 
 # Moshi
 -keep class com.g365calendar.data.model.** { *; }

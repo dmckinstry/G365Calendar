@@ -10,18 +10,21 @@ import javax.inject.Inject
  * OkHttp interceptor that attaches the Bearer token from MSAL
  * to all outgoing Microsoft Graph API requests.
  */
-class AuthInterceptor @Inject constructor(
-    private val authManager: AuthManager,
-) : Interceptor {
+class AuthInterceptor
+    @Inject
+    constructor(
+        private val authManager: AuthManager,
+    ) : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val token =
+                runBlocking { authManager.getAccessToken() }
+                    ?: return chain.proceed(chain.request())
 
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val token = runBlocking { authManager.getAccessToken() }
-            ?: return chain.proceed(chain.request())
-
-        val request = chain.request().newBuilder()
-            .addHeader("Authorization", "Bearer $token")
-            .addHeader("Accept", "application/json")
-            .build()
-        return chain.proceed(request)
+            val request =
+                chain.request().newBuilder()
+                    .addHeader("Authorization", "Bearer $token")
+                    .addHeader("Accept", "application/json")
+                    .build()
+            return chain.proceed(request)
+        }
     }
-}

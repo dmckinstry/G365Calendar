@@ -18,7 +18,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-
     private const val GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0/"
 
     @Provides
@@ -46,7 +45,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
+    fun provideRetrofit(
+        okHttpClient: OkHttpClient,
+        moshi: Moshi,
+    ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(GRAPH_BASE_URL)
             .client(okHttpClient)

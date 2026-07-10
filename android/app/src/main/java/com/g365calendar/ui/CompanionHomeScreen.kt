@@ -27,7 +27,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun CompanionHomeScreen(
+fun companionHomeScreen(
     viewModel: MainViewModel,
     onNavigateToCalendarSelection: () -> Unit,
 ) {
@@ -53,10 +53,10 @@ fun CompanionHomeScreen(
                 }
             }
             is AuthState.Status.Unauthenticated -> {
-                SignInSection(viewModel)
+                signInSection(viewModel)
             }
             is AuthState.Status.Authenticated -> {
-                AuthenticatedSection(
+                authenticatedSection(
                     displayName = (authStatus as AuthState.Status.Authenticated).displayName,
                     syncStatus = syncStatus,
                     lastSyncTime = lastSyncTime,
@@ -71,14 +71,14 @@ fun CompanionHomeScreen(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SignInSection(viewModel)
+                signInSection(viewModel)
             }
         }
     }
 }
 
 @Composable
-private fun SignInSection(viewModel: MainViewModel) {
+private fun signInSection(viewModel: MainViewModel) {
     val activity = LocalContext.current as? android.app.Activity
 
     Column(
@@ -101,7 +101,7 @@ private fun SignInSection(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun AuthenticatedSection(
+private fun authenticatedSection(
     displayName: String?,
     syncStatus: SyncUiState,
     lastSyncTime: Long?,
@@ -121,17 +121,19 @@ private fun AuthenticatedSection(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Sync Status", style = MaterialTheme.typography.labelMedium)
                 Text(
-                    text = when (syncStatus) {
-                        is SyncUiState.Idle -> "Not yet synced"
-                        is SyncUiState.Syncing -> "Syncing…"
-                        is SyncUiState.Success -> "${syncStatus.eventCount} events synced"
-                        is SyncUiState.Error -> "Error: ${syncStatus.message}"
-                    },
+                    text =
+                        when (syncStatus) {
+                            is SyncUiState.Idle -> "Not yet synced"
+                            is SyncUiState.Syncing -> "Syncing…"
+                            is SyncUiState.Success -> "${syncStatus.eventCount} events synced"
+                            is SyncUiState.Error -> "Error: ${syncStatus.message}"
+                        },
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 if (lastSyncTime != null) {
-                    val formatted = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
-                        .format(Date(lastSyncTime))
+                    val formatted =
+                        SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+                            .format(Date(lastSyncTime))
                     Text("Last sync: $formatted", style = MaterialTheme.typography.bodySmall)
                 }
             }

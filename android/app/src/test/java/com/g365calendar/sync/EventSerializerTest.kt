@@ -9,21 +9,21 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class EventSerializerTest {
-
     private lateinit var serializer: EventSerializer
 
-    private val testEvent = DisplayEvent(
-        id = "evt-1",
-        title = "Team Standup",
-        startDateTime = "2026-02-15T09:00:00.0000000",
-        startTimeZone = "UTC",
-        endDateTime = "2026-02-15T09:30:00.0000000",
-        endTimeZone = "UTC",
-        location = "Conference Room A",
-        isAllDay = false,
-        calendarName = "Work",
-        calendarColor = "#0078D4",
-    )
+    private val testEvent =
+        DisplayEvent(
+            id = "evt-1",
+            title = "Team Standup",
+            startDateTime = "2026-02-15T09:00:00.0000000",
+            startTimeZone = "UTC",
+            endDateTime = "2026-02-15T09:30:00.0000000",
+            endTimeZone = "UTC",
+            location = "Conference Room A",
+            isAllDay = false,
+            calendarName = "Work",
+            calendarColor = "#0078D4",
+        )
 
     @BeforeEach
     fun setup() {
@@ -80,11 +80,12 @@ class EventSerializerTest {
 
     @Test
     fun `serialize handles multiple events`() {
-        val events = listOf(
-            testEvent,
-            testEvent.copy(id = "evt-2", title = "Lunch"),
-            testEvent.copy(id = "evt-3", title = "Review"),
-        )
+        val events =
+            listOf(
+                testEvent,
+                testEvent.copy(id = "evt-2", title = "Lunch"),
+                testEvent.copy(id = "evt-3", title = "Review"),
+            )
         val json = serializer.serialize(events)
         val result = serializer.deserialize(json)
 

@@ -23,7 +23,9 @@
         </activity>
 
         <!-- MSAL auth redirect activity -->
-        <activity android:name="com.microsoft.identity.client.BrowserTabActivity">
+        <activity
+            android:name="com.microsoft.identity.client.BrowserTabActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

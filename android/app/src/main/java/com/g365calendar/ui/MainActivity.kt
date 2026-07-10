@@ -14,7 +14,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.g365calendar.ui.theme.G365CalendarTheme
+import com.g365calendar.ui.theme.g365CalendarTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -23,12 +23,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            G365CalendarTheme {
+            g365CalendarTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Surface(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
                         color = MaterialTheme.colorScheme.background,
                     ) {
                         val navController = rememberNavController()
@@ -36,7 +37,7 @@ class MainActivity : ComponentActivity() {
 
                         NavHost(navController = navController, startDestination = "home") {
                             composable("home") {
-                                CompanionHomeScreen(
+                                companionHomeScreen(
                                     viewModel = mainViewModel,
                                     onNavigateToCalendarSelection = {
                                         navController.navigate("calendar_selection")
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable("calendar_selection") {
-                                CalendarSelectionScreen()
+                                calendarSelectionScreen()
                             }
                         }
                     }
