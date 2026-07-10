@@ -1,4 +1,5 @@
 import Toybox.Application;
+import Toybox.Lang;
 import Toybox.WatchUi;
 
 //! Main application class for G365Calendar watch app.
