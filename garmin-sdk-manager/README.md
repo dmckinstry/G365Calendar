@@ -1,6 +1,6 @@
 # Source
 
-All work in this folder is based on [the work](https://github.com/jonesdavidj/garmin-sdk-mgr) from [David J. Jones](https://github.com/jonesdavidj).  No changes bhave been made to his scripts although I'm not necessarily using directly as intended.
+All work in this folder is based on [the work](https://github.com/jonesdavidj/garmin-sdk-mgr) from [David J. Jones](https://github.com/jonesdavidj).  No changes have been made to his scripts although I'm not necessarily using directly as intended.
 
 *Original README follows*
 
