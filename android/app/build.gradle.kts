@@ -112,6 +112,10 @@ dependencies {
     androidTestImplementation(libs.compose.ui.test.junit4)
 }
 
-tasks.withType<Test> {
+tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    testLogging {
+        events("passed", "failed", "skipped")
+        showStandardStreams = true
+    }
 }

@@ -26,11 +26,10 @@ Garmin watch app (Monkey C / Connect IQ)
 ## Quick start
 
 1. Review the platform-specific guides:
-   - [android/README.md](android/README.md)
-   - [garmin/README.md](garmin/README.md)
+   - [android/README.md](android/README.md) for Android setup, build, and test instructions
+   - [garmin/README.md](garmin/README.md) for Garmin build and device-specific instructions
 2. Configure the Microsoft 365 app registration for the Android app.
-3. Build and run the Android app with Gradle.
-4. Build and install the Garmin app with Connect IQ tooling.
+3. Follow the Android and Garmin setup steps in their respective guides.
 
 ## Common prerequisites
 
@@ -38,6 +37,16 @@ Garmin watch app (Monkey C / Connect IQ)
 - Android SDK with API 26+ and compile SDK 35
 - Garmin Connect IQ SDK and a Garmin developer account
 - A Microsoft Entra app registration with the `Calendars.Read` permission
+
+## Build and test
+
+From the project root, use the repo-level Make targets as follows:
+
+| Target | Underlying command | Description |
+| --- | --- | --- |
+| `make build` | `make -C android build` and `make -C garmin build` | Builds both the Android and Garmin apps. |
+| `make test` | `make -C android test` and `make -C garmin test` | Runs the Android and Garmin test workflows. |
+| `make dev` | `make -C android dev` and `make -C garmin dev` | Starts the Android and Garmin development flows. |
 
 ## Notes
 

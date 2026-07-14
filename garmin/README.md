@@ -20,20 +20,15 @@ The Garmin app is the watch-side portion of G365Calendar. It displays calendar e
 - A Garmin developer account
 - The Connect IQ command-line tools available on your `PATH`
 
-## Build and run
+## Build and test
 
-Build the app with:
+From the garmin folder, use `make` as follows:
 
-```bash
-monkeyc -f garmin/monkey.jungle -d venu3 -o garmin/bin/G365Calendar.prg
-```
-
-Run the Connect IQ test app with:
-
-```bash
-monkeyc -f garmin/monkey.jungle -d venu3 -t -o garmin/bin/G365Calendar-test.prg
-connectiq && monkeydo garmin/bin/G365Calendar-test.prg venu3
-```
+| Target | Underlying command | Description |
+| --- | --- | --- |
+| `make build-garmin` or `make build` | `monkeyc -f garmin/monkey.jungle`... | Builds the Garmin app. |
+| `make test-garmin` or `make test` | `monkeyc -f garmin/monkey.jungle -t`... and `connectiq && monkeydo -t`... | Builds and runs the Garmin unit tests. |
+| `make dev-garmin` or `make dev` | `connectiq && monkeydo`... | Builds the Garmin app and launches it in the simulator. |
 
 ## Project structure
 

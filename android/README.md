@@ -26,14 +26,13 @@ The Android app is the companion application for G365Calendar. It authenticates 
 
 ## Build and test
 
-From this folder, run:
+From the android folder, use `make` as follows:
 
-```bash
-./gradlew assembleDebug
-./gradlew test
-./gradlew lint
-./gradlew ktlintCheck
-```
+| Target | Underlying command | Description |
+| --- | --- | --- |
+| `make build-android` or `make build` | `./gradlew assembleDebug` | Builds the Android debug APK. |
+| `make test-android` or `make test` | `./gradlew test` | Runs the Android unit tests. |
+| `make dev-android` or `make dev` | `emulator`... and `./gradlew installDebug` | Attempts to launch the `Pixel_8_API_36` emulator (if needed) and then installs the debug build. |
 
 ## Project structure
 
