@@ -18,18 +18,18 @@ class G365CalendarDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onNextPage() as Boolean {
-        _view.scroll(60);
+        _view.scroll(_view.getRowHeight());
         return true;
     }
 
     function onPreviousPage() as Boolean {
-        _view.scroll(-60);
+        _view.scroll(-_view.getRowHeight());
         return true;
     }
 
     function onSelect() as Boolean {
         // Show detail for the currently centered event
-        var index = _view.getEventIndexAtY(195); // center of ~390px screen
+        var index = _view.getEventIndexAtY(_view.getViewHeight() / 2);
         var event = _view.getEventAt(index);
         if (event != null) {
             WatchUi.pushView(

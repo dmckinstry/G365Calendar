@@ -11,14 +11,41 @@ class G365CalendarView extends WatchUi.View {
     private var _events as Array<Dictionary> = [] as Array<Dictionary>;
     private var _scrollOffset as Number = 0;
     private var _viewHeight as Number = 390;
-    private const ITEM_HEIGHT = 65;
-    private const HEADER_HEIGHT = 40;
+
+    // Vertical padding/spacing between text lines, in pixels.
+    private const LINE_SPACING = 4;
+    private const ROW_TOP_PADDING = 4;
+    private const ROW_BOTTOM_PADDING = 6;
+    private const HEADER_TOP_PADDING = 6;
+    private const HEADER_BOTTOM_PADDING = 6;
+    private const FOOTER_BOTTOM_PADDING = 18;
+
+    // Font heights are measured (not guessed) so rows never overlap
+    // regardless of device font metrics/resolution.
+    private var _titleFontHeight as Number = 0;
+    private var _timeFontHeight as Number = 0;
+    private var _locationFontHeight as Number = 0;
+    private var _headerFontHeight as Number = 0;
+
+    private var ITEM_HEIGHT as Number = 65;
+    private var HEADER_HEIGHT as Number = 40;
     private const STATUS_HEIGHT = 24;
     private const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
     private const DAY_MS = 24 * 60 * 60 * 1000;
 
     function initialize() {
         View.initialize();
+
+        _titleFontHeight = Graphics.getFontHeight(Graphics.FONT_TINY);
+        _timeFontHeight = Graphics.getFontHeight(Graphics.FONT_XTINY);
+        _locationFontHeight = Graphics.getFontHeight(Graphics.FONT_XTINY);
+        _headerFontHeight = Graphics.getFontHeight(Graphics.FONT_SMALL);
+
+        HEADER_HEIGHT = HEADER_TOP_PADDING + _headerFontHeight + HEADER_BOTTOM_PADDING;
+        ITEM_HEIGHT = ROW_TOP_PADDING
+            + _titleFontHeight + LINE_SPACING
+            + _timeFontHeight + LINE_SPACING
+            + _locationFontHeight + ROW_BOTTOM_PADDING;
     }
 
     function onLayout(dc as Dc) as Void {
@@ -39,7 +66,7 @@ class G365CalendarView extends WatchUi.View {
         // Header
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.drawText(
-            width / 2, 10,
+            width / 2, HEADER_TOP_PADDING,
             Graphics.FONT_SMALL,
             "G365 Calendar",
             Graphics.TEXT_JUSTIFY_CENTER
@@ -65,7 +92,7 @@ class G365CalendarView extends WatchUi.View {
             y += ITEM_HEIGHT;
         }
 
-        if (y + STATUS_HEIGHT > 0 && y < height) {
+        if (y + STATUS_HEIGHT + FOOTER_BOTTOM_PADDING > 0 && y < height) {
             drawSyncStatus(dc, 10, y, width - 20);
         }
     }
@@ -85,7 +112,8 @@ class G365CalendarView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         var title = event.get("title");
         if (title == null) { title = "(No title)"; }
-        dc.drawText(textX, y + 2, Graphics.FONT_TINY, title as String, Graphics.TEXT_JUSTIFY_LEFT);
+        var titleY = y + ROW_TOP_PADDING;
+        dc.drawText(textX, titleY, Graphics.FONT_TINY, title as String, Graphics.TEXT_JUSTIFY_LEFT);
 
         // Time
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
@@ -96,13 +124,15 @@ class G365CalendarView extends WatchUi.View {
         } else if (startTime != null && startTime instanceof String) {
             timeStr = formatTime(startTime as String);
         }
-        dc.drawText(textX, y + 22, Graphics.FONT_XTINY, timeStr, Graphics.TEXT_JUSTIFY_LEFT);
+        var timeY = titleY + _titleFontHeight + LINE_SPACING;
+        dc.drawText(textX, timeY, Graphics.FONT_XTINY, timeStr, Graphics.TEXT_JUSTIFY_LEFT);
 
         // Location
         var location = event.get("location");
         if (location != null && location instanceof String) {
             dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(textX, y + 40, Graphics.FONT_XTINY, location as String, Graphics.TEXT_JUSTIFY_LEFT);
+            var locationY = timeY + _timeFontHeight + LINE_SPACING;
+            dc.drawText(textX, locationY, Graphics.FONT_XTINY, location as String, Graphics.TEXT_JUSTIFY_LEFT);
         }
 
         // Separator line
@@ -110,9 +140,19 @@ class G365CalendarView extends WatchUi.View {
         dc.drawLine(x, y + ITEM_HEIGHT - 1, x + w, y + ITEM_HEIGHT - 1);
     }
 
+    //! Returns the pixel height of a single event row, for scroll increments.
+    function getRowHeight() as Number {
+        return ITEM_HEIGHT;
+    }
+
+    //! Returns the last known view height, for centering calculations.
+    function getViewHeight() as Number {
+        return _viewHeight;
+    }
+
     //! Scrolls the event list by the given delta.
     function scroll(delta as Number) as Void {
-        var contentHeight = HEADER_HEIGHT + (_events.size() * ITEM_HEIGHT) + STATUS_HEIGHT;
+        var contentHeight = HEADER_HEIGHT + (_events.size() * ITEM_HEIGHT) + STATUS_HEIGHT + FOOTER_BOTTOM_PADDING;
         var maxScroll = contentHeight - _viewHeight;
         if (maxScroll < 0) { maxScroll = 0; }
         _scrollOffset += delta;

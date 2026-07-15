@@ -34,5 +34,65 @@
     "isAllDay": false,
     "calendarName": "Personal",
     "calendarColor": "#FBBC05"
+  },
+  {
+    "id": "debug-4",
+    "title": "Design Review",
+    "startDateTime": "+3:30",
+    "startTimeZone": "Local",
+    "endDateTime": "+4:00",
+    "endTimeZone": "Local",
+    "location": "Room 204",
+    "isAllDay": false,
+    "calendarName": "Product",
+    "calendarColor": "#8E24AA"
+  },
+  {
+    "id": "debug-5",
+    "title": "1:1 with Manager",
+    "startDateTime": "+4:30",
+    "startTimeZone": "Local",
+    "endDateTime": "+5:00",
+    "endTimeZone": "Local",
+    "location": "Teams",
+    "isAllDay": false,
+    "calendarName": "Work",
+    "calendarColor": "#1A73E8"
+  },
+  {
+    "id": "debug-6",
+    "title": "Lunch with Alex",
+    "startDateTime": "+5:15",
+    "startTimeZone": "Local",
+    "endDateTime": "+6:00",
+    "endTimeZone": "Local",
+    "location": "Cafeteria",
+    "isAllDay": false,
+    "calendarName": "Personal",
+    "calendarColor": "#FBBC05"
+  },
+  {
+    "id": "debug-7",
+    "title": "Quarterly Planning",
+    "startDateTime": "+6:30",
+    "startTimeZone": "Local",
+    "endDateTime": "+7:30",
+    "endTimeZone": "Local",
+    "location": "Conference Room B",
+    "isAllDay": false,
+    "calendarName": "Engineering",
+    "calendarColor": "#34A853"
+  },
+  {
+    "id": "debug-8",
+    "title": "Yoga Class",
+    "startDateTime": "+8:00",
+    "startTimeZone": "Local",
+    "endDateTime": "+9:00",
+    "endTimeZone": "Local",
+    "location": "Studio",
+    "isAllDay": false,
+    "calendarName": "Personal",
+    "calendarColor": "#FBBC05"
   }
 ]
