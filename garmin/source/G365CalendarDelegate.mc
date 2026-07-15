@@ -27,9 +27,24 @@ class G365CalendarDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    function onTap(clickEvent as WatchUi.ClickEvent) as Boolean {
+        var coordinates = clickEvent.getCoordinates();
+        return openEventAtY(coordinates[1]);
+    }
+
+    function onKey(keyEvent as WatchUi.KeyEvent) as Boolean {
+        if (keyEvent.getKey() == WatchUi.KEY_ENTER) {
+            return openEventAtY(_view.getViewHeight() / 2);
+        }
+        return false;
+    }
+
     function onSelect() as Boolean {
-        // Show detail for the currently centered event
-        var index = _view.getEventIndexAtY(_view.getViewHeight() / 2);
+        return false;
+    }
+
+    private function openEventAtY(y as Number) as Boolean {
+        var index = _view.getEventIndexAtY(y);
         var event = _view.getEventAt(index);
         if (event != null) {
             WatchUi.pushView(
@@ -37,7 +52,8 @@ class G365CalendarDelegate extends WatchUi.BehaviorDelegate {
                 new EventDetailDelegate(),
                 WatchUi.SLIDE_LEFT
             );
+            return true;
         }
-        return true;
+        return false;
     }
 }
