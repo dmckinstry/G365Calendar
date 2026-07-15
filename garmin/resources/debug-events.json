@@ -1,0 +1,38 @@
+[
+  {
+    "id": "debug-1",
+    "title": "Retro Follow-up",
+    "startDateTime": "-1:00",
+    "startTimeZone": "Local",
+    "endDateTime": "-0:30",
+    "endTimeZone": "Local",
+    "location": "Conference Room A",
+    "isAllDay": false,
+    "calendarName": "Work",
+    "calendarColor": "#1A73E8"
+  },
+  {
+    "id": "debug-2",
+    "title": "Current Sprint Planning",
+    "startDateTime": "-0:15",
+    "startTimeZone": "Local",
+    "endDateTime": "+0:45",
+    "endTimeZone": "Local",
+    "location": "Teams",
+    "isAllDay": false,
+    "calendarName": "Engineering",
+    "calendarColor": "#34A853"
+  },
+  {
+    "id": "debug-3",
+    "title": "Evening Run",
+    "startDateTime": "+2:00",
+    "startTimeZone": "Local",
+    "endDateTime": "+3:00",
+    "endTimeZone": "Local",
+    "location": "City Park",
+    "isAllDay": false,
+    "calendarName": "Personal",
+    "calendarColor": "#FBBC05"
+  }
+]

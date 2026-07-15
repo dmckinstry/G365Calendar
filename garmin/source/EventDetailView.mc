@@ -22,7 +22,6 @@ class EventDetailView extends WatchUi.View {
 
         var width = dc.getWidth();
         var y = 30;
-        var margin = 20;
 
         // Calendar color bar at top
         var colorStr = _event.get("calendarColor");

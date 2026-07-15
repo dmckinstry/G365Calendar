@@ -1,4 +1,6 @@
 import Toybox.Graphics;
+import Toybox.Time;
+import Toybox.Time.Gregorian;
 import Toybox.WatchUi;
 import Toybox.Lang;
 
@@ -8,8 +10,12 @@ class G365CalendarView extends WatchUi.View {
 
     private var _events as Array<Dictionary> = [] as Array<Dictionary>;
     private var _scrollOffset as Number = 0;
+    private var _viewHeight as Number = 390;
     private const ITEM_HEIGHT = 65;
     private const HEADER_HEIGHT = 40;
+    private const STATUS_HEIGHT = 24;
+    private const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+    private const DAY_MS = 24 * 60 * 60 * 1000;
 
     function initialize() {
         View.initialize();
@@ -28,6 +34,7 @@ class G365CalendarView extends WatchUi.View {
 
         var width = dc.getWidth();
         var height = dc.getHeight();
+        _viewHeight = height;
 
         // Header
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
@@ -45,6 +52,7 @@ class G365CalendarView extends WatchUi.View {
                 "No events",
                 Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
             );
+            drawSyncStatus(dc, 10, height - 26, width - 20);
             return;
         }
 
@@ -55,6 +63,10 @@ class G365CalendarView extends WatchUi.View {
                 drawEventItem(dc, _events[i], 10, y, width - 20);
             }
             y += ITEM_HEIGHT;
+        }
+
+        if (y + STATUS_HEIGHT > 0 && y < height) {
+            drawSyncStatus(dc, 10, y, width - 20);
         }
     }
 
@@ -100,7 +112,8 @@ class G365CalendarView extends WatchUi.View {
 
     //! Scrolls the event list by the given delta.
     function scroll(delta as Number) as Void {
-        var maxScroll = (_events.size() * ITEM_HEIGHT) - 200;
+        var contentHeight = HEADER_HEIGHT + (_events.size() * ITEM_HEIGHT) + STATUS_HEIGHT;
+        var maxScroll = contentHeight - _viewHeight;
         if (maxScroll < 0) { maxScroll = 0; }
         _scrollOffset += delta;
         if (_scrollOffset < 0) { _scrollOffset = 0; }
@@ -154,6 +167,65 @@ class G365CalendarView extends WatchUi.View {
             // Fall through
         }
         return Graphics.COLOR_BLUE;
+    }
+
+    //! Draws sync status footer message.
+    private function drawSyncStatus(dc as Dc, x as Number, y as Number, w as Number) as Void {
+        var status = getSyncStatus();
+        dc.setColor(status.get("color") as Number, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(
+            x + w,
+            y + 4,
+            Graphics.FONT_XTINY,
+            status.get("text") as String,
+            Graphics.TEXT_JUSTIFY_RIGHT
+        );
+    }
+
+    //! Returns sync status text and color based on age.
+    private function getSyncStatus() as Dictionary {
+        var lastSync = EventStore.getLastSyncTime();
+        if (lastSync == null) {
+            return { "text" => "Disconnected", "color" => Graphics.COLOR_RED };
+        }
+
+        var nowMs = Time.now().value() * 1000;
+        var ageMs = nowMs - (lastSync as Number);
+        if (ageMs < 0) { ageMs = 0; }
+
+        if (ageMs > DAY_MS) {
+            return {
+                "text" => "Last sync " + formatShortDateTime(lastSync as Number),
+                "color" => Graphics.COLOR_RED
+            };
+        } else if (ageMs > FOUR_HOURS_MS) {
+            return {
+                "text" => "Last sync " + formatSyncTime(lastSync as Number),
+                "color" => Graphics.COLOR_YELLOW
+            };
+        }
+
+        return {
+            "text" => "Last sync " + formatSyncTime(lastSync as Number),
+            "color" => Graphics.COLOR_GREEN
+        };
+    }
+
+    private function formatSyncTime(timestampMs as Number) as String {
+        var info = Gregorian.info(new Time.Moment(timestampMs / 1000), Time.FORMAT_SHORT);
+        return pad2(info.hour) + ":" + pad2(info.min);
+    }
+
+    private function formatShortDateTime(timestampMs as Number) as String {
+        var info = Gregorian.info(new Time.Moment(timestampMs / 1000), Time.FORMAT_SHORT);
+        return info.month + "/" + info.day + " " + pad2(info.hour) + ":" + pad2(info.min);
+    }
+
+    private function pad2(value as Number) as String {
+        if (value < 10) {
+            return "0" + value;
+        }
+        return value.toString();
     }
 
     function onHide() as Void {
