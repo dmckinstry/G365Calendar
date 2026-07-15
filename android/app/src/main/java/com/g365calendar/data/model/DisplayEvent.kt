@@ -15,4 +15,5 @@ data class DisplayEvent(
     val isAllDay: Boolean,
     val calendarName: String,
     val calendarColor: String?,
+    val description: String? = null,
 )

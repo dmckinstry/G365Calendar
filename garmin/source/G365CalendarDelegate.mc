@@ -47,9 +47,10 @@ class G365CalendarDelegate extends WatchUi.BehaviorDelegate {
         var index = _view.getEventIndexAtY(y);
         var event = _view.getEventAt(index);
         if (event != null) {
+            var detailView = new EventDetailView(event);
             WatchUi.pushView(
-                new EventDetailView(event),
-                new EventDetailDelegate(),
+                detailView,
+                new EventDetailDelegate(detailView),
                 WatchUi.SLIDE_LEFT
             );
             return true;

@@ -17,11 +17,15 @@ class EventSerializer
     constructor(
         private val moshi: Moshi,
     ) {
+        private companion object {
+            const val MAX_DESCRIPTION_LENGTH = 1024
+        }
+
         private val listType = Types.newParameterizedType(List::class.java, DisplayEvent::class.java)
         private val adapter = moshi.adapter<List<DisplayEvent>>(listType)
 
         fun serialize(events: List<DisplayEvent>): String {
-            return adapter.toJson(events)
+            return adapter.toJson(normalizeDescriptions(events))
         }
 
         fun deserialize(json: String): List<DisplayEvent> {
@@ -38,5 +42,16 @@ class EventSerializer
                 "syncTimestamp" to System.currentTimeMillis(),
                 "eventCount" to events.size,
             )
+        }
+
+        private fun normalizeDescriptions(events: List<DisplayEvent>): List<DisplayEvent> {
+            return events.map { event ->
+                val description = event.description
+                if (description == null || description.length <= MAX_DESCRIPTION_LENGTH) {
+                    event
+                } else {
+                    event.copy(description = description.take(MAX_DESCRIPTION_LENGTH))
+                }
+            }
         }
     }

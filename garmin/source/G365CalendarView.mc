@@ -153,12 +153,30 @@ class G365CalendarView extends WatchUi.View {
     //! Scrolls the event list by the given delta.
     function scroll(delta as Number) as Void {
         var contentHeight = HEADER_HEIGHT + (_events.size() * ITEM_HEIGHT) + STATUS_HEIGHT + FOOTER_BOTTOM_PADDING;
-        var maxScroll = contentHeight - _viewHeight;
-        if (maxScroll < 0) { maxScroll = 0; }
+        var minScroll = getMinScroll();
+        var maxScroll = getMaxScroll(contentHeight);
         _scrollOffset += delta;
-        if (_scrollOffset < 0) { _scrollOffset = 0; }
+        if (_scrollOffset < minScroll) { _scrollOffset = minScroll; }
         if (_scrollOffset > maxScroll) { _scrollOffset = maxScroll; }
         WatchUi.requestUpdate();
+    }
+
+    private function getMinScroll() as Number {
+        var centerY = _viewHeight / 2;
+        var minScroll = HEADER_HEIGHT - centerY;
+        if (minScroll > 0) {
+            return 0;
+        }
+        return minScroll;
+    }
+
+    private function getMaxScroll(contentHeight as Number) as Number {
+        var centerY = _viewHeight / 2;
+        var maxScroll = contentHeight - centerY;
+        if (maxScroll < 0) {
+            return 0;
+        }
+        return maxScroll;
     }
 
     //! Returns the event at the given index for detail view.

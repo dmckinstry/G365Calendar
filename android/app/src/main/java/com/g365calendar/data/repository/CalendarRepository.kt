@@ -89,5 +89,6 @@ internal fun CalendarEvent.toDisplayEvent(calendar: Calendar): DisplayEvent {
         isAllDay = isAllDay,
         calendarName = calendar.name,
         calendarColor = calendar.hexColor ?: calendar.color,
+        description = bodyPreview?.takeIf { it.isNotBlank() },
     )
 }

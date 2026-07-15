@@ -7,6 +7,7 @@
     "endDateTime": "-0:30",
     "endTimeZone": "Local",
     "location": "Conference Room A",
+    "description": "Review action items from the sprint retro and confirm owners for the follow-up tasks.",
     "isAllDay": false,
     "calendarName": "Work",
     "calendarColor": "#1A73E8"
@@ -19,6 +20,7 @@
     "endDateTime": "+0:45",
     "endTimeZone": "Local",
     "location": "Teams",
+    "description": "Finalize scope for the next sprint, review carry-over work, and capture any dependencies that need follow-up before kickoff.",
     "isAllDay": false,
     "calendarName": "Engineering",
     "calendarColor": "#34A853"

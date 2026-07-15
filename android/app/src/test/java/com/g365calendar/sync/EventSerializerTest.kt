@@ -9,6 +9,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class EventSerializerTest {
+    private companion object {
+        const val MAX_DESCRIPTION_LENGTH = 1024
+    }
+
     private lateinit var serializer: EventSerializer
 
     private val testEvent =
@@ -23,6 +27,7 @@ class EventSerializerTest {
             isAllDay = false,
             calendarName = "Work",
             calendarColor = "#0078D4",
+            description = "Sprint review and blockers.",
         )
 
     @BeforeEach
@@ -43,6 +48,7 @@ class EventSerializerTest {
         assertEquals(testEvent.location, result[0].location)
         assertEquals(testEvent.calendarName, result[0].calendarName)
         assertEquals(testEvent.calendarColor, result[0].calendarColor)
+        assertEquals(testEvent.description, result[0].description)
     }
 
     @Test
@@ -93,5 +99,17 @@ class EventSerializerTest {
         assertEquals("Team Standup", result[0].title)
         assertEquals("Lunch", result[1].title)
         assertEquals("Review", result[2].title)
+    }
+
+    @Test
+    fun `serialize truncates descriptions longer than 1k characters`() {
+        val longDescription = "a".repeat(MAX_DESCRIPTION_LENGTH + 25)
+
+        val json = serializer.serialize(listOf(testEvent.copy(description = longDescription)))
+        val result = serializer.deserialize(json)
+
+        assertEquals(1, result.size)
+        assertEquals(MAX_DESCRIPTION_LENGTH, result[0].description?.length)
+        assertEquals(longDescription.take(MAX_DESCRIPTION_LENGTH), result[0].description)
     }
 }

@@ -33,6 +33,7 @@ class CalendarRepositoryTest {
         CalendarEvent(
             id = "evt-1",
             subject = "Team Standup",
+            bodyPreview = "Sprint review and blockers.",
             start = DateTimeTimeZone("2026-02-15T09:00:00.0000000", "UTC"),
             end = DateTimeTimeZone("2026-02-15T09:30:00.0000000", "UTC"),
             location = Location("Conference Room A"),
@@ -141,6 +142,7 @@ class CalendarRepositoryTest {
         assertEquals(false, displayEvent.isAllDay)
         assertEquals("Work Calendar", displayEvent.calendarName)
         assertEquals("#0078D4", displayEvent.calendarColor)
+        assertEquals("Sprint review and blockers.", displayEvent.description)
     }
 
     @Test
