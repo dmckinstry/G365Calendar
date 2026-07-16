@@ -1,5 +1,69 @@
 <layout id="MainLayout">
-    <label id="title" x="center" y="10" font="Graphics.FONT_SMALL" justification="Graphics.TEXT_JUSTIFY_CENTER" color="Graphics.COLOR_WHITE">
-        G365
+    <drawable id="CalendarBackground" />
+
+    <label
+        id="TitleLabel"
+        x="center"
+        y="6"
+        font="Graphics.FONT_SMALL"
+        justification="Graphics.TEXT_JUSTIFY_CENTER"
+        color="Graphics.COLOR_WHITE"
+    >
+        G365 Calendar
     </label>
+
+    <label
+        id="NoEventsLabel"
+        x="center"
+        y="center"
+        font="Graphics.FONT_MEDIUM"
+        justification="Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER"
+        color="Graphics.COLOR_WHITE"
+        visible="false"
+    />
+
+    <label
+        id="SyncStatusLabel"
+        x="center"
+        y="bottom"
+        font="Graphics.FONT_XTINY"
+        justification="Graphics.TEXT_JUSTIFY_CENTER"
+        color="Graphics.COLOR_GREEN"
+        visible="false"
+    />
+
+    <drawable id="Row0Decor" class="EventRowDecorationDrawable" />
+    <label id="Row0Title" font="Graphics.FONT_TINY" color="Graphics.COLOR_WHITE" visible="false" />
+    <label id="Row0Time" font="Graphics.FONT_XTINY" color="Graphics.COLOR_LT_GRAY" visible="false" />
+    <label id="Row0Location" font="Graphics.FONT_XTINY" color="Graphics.COLOR_DK_GRAY" visible="false" />
+
+    <drawable id="Row1Decor" class="EventRowDecorationDrawable" />
+    <label id="Row1Title" font="Graphics.FONT_TINY" color="Graphics.COLOR_WHITE" visible="false" />
+    <label id="Row1Time" font="Graphics.FONT_XTINY" color="Graphics.COLOR_LT_GRAY" visible="false" />
+    <label id="Row1Location" font="Graphics.FONT_XTINY" color="Graphics.COLOR_DK_GRAY" visible="false" />
+
+    <drawable id="Row2Decor" class="EventRowDecorationDrawable" />
+    <label id="Row2Title" font="Graphics.FONT_TINY" color="Graphics.COLOR_WHITE" visible="false" />
+    <label id="Row2Time" font="Graphics.FONT_XTINY" color="Graphics.COLOR_LT_GRAY" visible="false" />
+    <label id="Row2Location" font="Graphics.FONT_XTINY" color="Graphics.COLOR_DK_GRAY" visible="false" />
+
+    <drawable id="Row3Decor" class="EventRowDecorationDrawable" />
+    <label id="Row3Title" font="Graphics.FONT_TINY" color="Graphics.COLOR_WHITE" visible="false" />
+    <label id="Row3Time" font="Graphics.FONT_XTINY" color="Graphics.COLOR_LT_GRAY" visible="false" />
+    <label id="Row3Location" font="Graphics.FONT_XTINY" color="Graphics.COLOR_DK_GRAY" visible="false" />
+
+    <drawable id="Row4Decor" class="EventRowDecorationDrawable" />
+    <label id="Row4Title" font="Graphics.FONT_TINY" color="Graphics.COLOR_WHITE" visible="false" />
+    <label id="Row4Time" font="Graphics.FONT_XTINY" color="Graphics.COLOR_LT_GRAY" visible="false" />
+    <label id="Row4Location" font="Graphics.FONT_XTINY" color="Graphics.COLOR_DK_GRAY" visible="false" />
+
+    <drawable id="Row5Decor" class="EventRowDecorationDrawable" />
+    <label id="Row5Title" font="Graphics.FONT_TINY" color="Graphics.COLOR_WHITE" visible="false" />
+    <label id="Row5Time" font="Graphics.FONT_XTINY" color="Graphics.COLOR_LT_GRAY" visible="false" />
+    <label id="Row5Location" font="Graphics.FONT_XTINY" color="Graphics.COLOR_DK_GRAY" visible="false" />
+
+    <drawable id="Row6Decor" class="EventRowDecorationDrawable" />
+    <label id="Row6Title" font="Graphics.FONT_TINY" color="Graphics.COLOR_WHITE" visible="false" />
+    <label id="Row6Time" font="Graphics.FONT_XTINY" color="Graphics.COLOR_LT_GRAY" visible="false" />
+    <label id="Row6Location" font="Graphics.FONT_XTINY" color="Graphics.COLOR_DK_GRAY" visible="false" />
 </layout>

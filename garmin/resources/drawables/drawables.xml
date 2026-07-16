@@ -1,3 +1,14 @@
 <drawables>
     <bitmap id="LauncherIcon" filename="../drawables/launcher_icon.png" />
+
+    <drawable-list id="CalendarBackground" background="Graphics.COLOR_BLACK">
+        <shape
+            type="rectangle"
+            x="0"
+            y="0"
+            width="fill"
+            height="fill"
+            color="Graphics.COLOR_BLACK"
+        />
+    </drawable-list>
 </drawables>

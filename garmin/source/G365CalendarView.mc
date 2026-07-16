@@ -5,26 +5,31 @@ import Toybox.WatchUi;
 import Toybox.Lang;
 
 //! Main view displaying a scrollable list of calendar events.
-//! Shows event title, time, and location with calendar color indicator.
+//! Shows event title and start time with calendar color indicator.
 class G365CalendarView extends WatchUi.View {
+
+    private const WEEKDAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     private var _events as Array<Dictionary> = [] as Array<Dictionary>;
     private var _scrollOffset as Number = 0;
+    private var _viewWidth as Number = 390;
     private var _viewHeight as Number = 390;
 
     // Vertical padding/spacing between text lines, in pixels.
     private const LINE_SPACING = 4;
+    private const CONTENT_SIDE_PADDING = 10;
+    private const TEXT_LEFT_PADDING = 12;
     private const ROW_TOP_PADDING = 4;
     private const ROW_BOTTOM_PADDING = 6;
     private const HEADER_TOP_PADDING = 6;
     private const HEADER_BOTTOM_PADDING = 6;
     private const FOOTER_BOTTOM_PADDING = 18;
+    private const MAX_VISIBLE_ROWS = 7;
 
     // Font heights are measured (not guessed) so rows never overlap
     // regardless of device font metrics/resolution.
     private var _titleFontHeight as Number = 0;
     private var _timeFontHeight as Number = 0;
-    private var _locationFontHeight as Number = 0;
     private var _headerFontHeight as Number = 0;
 
     private var ITEM_HEIGHT as Number = 65;
@@ -32,112 +37,35 @@ class G365CalendarView extends WatchUi.View {
     private const STATUS_HEIGHT = 24;
     private const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
     private const DAY_MS = 24 * 60 * 60 * 1000;
+    private const SIX_DAYS_MS = 6 * DAY_MS;
 
     function initialize() {
         View.initialize();
-
-        _titleFontHeight = Graphics.getFontHeight(Graphics.FONT_TINY);
-        _timeFontHeight = Graphics.getFontHeight(Graphics.FONT_XTINY);
-        _locationFontHeight = Graphics.getFontHeight(Graphics.FONT_XTINY);
-        _headerFontHeight = Graphics.getFontHeight(Graphics.FONT_SMALL);
-
-        HEADER_HEIGHT = HEADER_TOP_PADDING + _headerFontHeight + HEADER_BOTTOM_PADDING;
-        ITEM_HEIGHT = ROW_TOP_PADDING
-            + _titleFontHeight + LINE_SPACING
-            + _timeFontHeight + LINE_SPACING
-            + _locationFontHeight + ROW_BOTTOM_PADDING;
+        initializeMetrics();
     }
 
     function onLayout(dc as Dc) as Void {
+        _viewWidth = dc.getWidth();
+        _viewHeight = dc.getHeight();
+        initializeMetrics();
+        setLayout(Rez.Layouts.MainLayout(dc));
+        configureStaticDrawables();
     }
 
     function onShow() as Void {
         _events = EventStore.getEvents();
+        WatchUi.requestUpdate();
     }
 
     function onUpdate(dc as Dc) as Void {
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.clear();
-
-        var width = dc.getWidth();
-        var height = dc.getHeight();
-        _viewHeight = height;
-
-        // Header
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(
-            width / 2, HEADER_TOP_PADDING,
-            Graphics.FONT_SMALL,
-            "G365 Calendar",
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
-
-        if (_events.size() == 0) {
-            dc.drawText(
-                width / 2, height / 2,
-                Graphics.FONT_MEDIUM,
-                "No events",
-                Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
-            );
-            drawSyncStatus(dc, 10, height - 26, width - 20);
-            return;
+        if (_viewWidth != dc.getWidth() || _viewHeight != dc.getHeight()) {
+            _viewWidth = dc.getWidth();
+            _viewHeight = dc.getHeight();
+            configureStaticDrawables();
         }
 
-        // Draw event list
-        var y = HEADER_HEIGHT - _scrollOffset;
-        for (var i = 0; i < _events.size(); i++) {
-            if (y + ITEM_HEIGHT > 0 && y < height) {
-                drawEventItem(dc, _events[i], 10, y, width - 20);
-            }
-            y += ITEM_HEIGHT;
-        }
-
-        if (y + STATUS_HEIGHT + FOOTER_BOTTOM_PADDING > 0 && y < height) {
-            drawSyncStatus(dc, 10, y, width - 20);
-        }
-    }
-
-    //! Draws a single event item row.
-    private function drawEventItem(dc as Dc, event as Dictionary, x as Number, y as Number, w as Number) as Void {
-        // Calendar color indicator
-        var colorStr = event.get("calendarColor");
-        if (colorStr != null && colorStr instanceof String) {
-            dc.setColor(parseColor(colorStr as String), Graphics.COLOR_TRANSPARENT);
-            dc.fillRectangle(x, y + 4, 4, ITEM_HEIGHT - 8);
-        }
-
-        var textX = x + 12;
-
-        // Event title
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        var title = event.get("title");
-        if (title == null) { title = "(No title)"; }
-        var titleY = y + ROW_TOP_PADDING;
-        dc.drawText(textX, titleY, Graphics.FONT_TINY, title as String, Graphics.TEXT_JUSTIFY_LEFT);
-
-        // Time
-        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-        var startTime = event.get("startDateTime");
-        var timeStr = "";
-        if (event.get("isAllDay") == true) {
-            timeStr = "All day";
-        } else if (startTime != null && startTime instanceof String) {
-            timeStr = formatTime(startTime as String);
-        }
-        var timeY = titleY + _titleFontHeight + LINE_SPACING;
-        dc.drawText(textX, timeY, Graphics.FONT_XTINY, timeStr, Graphics.TEXT_JUSTIFY_LEFT);
-
-        // Location
-        var location = event.get("location");
-        if (location != null && location instanceof String) {
-            dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
-            var locationY = timeY + _timeFontHeight + LINE_SPACING;
-            dc.drawText(textX, locationY, Graphics.FONT_XTINY, location as String, Graphics.TEXT_JUSTIFY_LEFT);
-        }
-
-        // Separator line
-        dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_TRANSPARENT);
-        dc.drawLine(x, y + ITEM_HEIGHT - 1, x + w, y + ITEM_HEIGHT - 1);
+        syncDrawables();
+        View.onUpdate(dc);
     }
 
     //! Returns the pixel height of a single event row, for scroll increments.
@@ -192,15 +120,314 @@ class G365CalendarView extends WatchUi.View {
         return ((y - HEADER_HEIGHT + _scrollOffset) / ITEM_HEIGHT).toNumber();
     }
 
-    //! Extracts a displayable time string (HH:MM) from ISO datetime.
-    private function formatTime(isoDateTime as String) as String {
-        // Format: "2026-02-15T09:00:00.0000000"
-        var tIndex = isoDateTime.find("T");
-        if (tIndex != null) {
-            var timePart = isoDateTime.substring(tIndex + 1, tIndex + 6);
-            return timePart;
+    private function initializeMetrics() as Void {
+        _titleFontHeight = Graphics.getFontHeight(Graphics.FONT_TINY);
+        _timeFontHeight = Graphics.getFontHeight(Graphics.FONT_XTINY);
+        _headerFontHeight = Graphics.getFontHeight(Graphics.FONT_SMALL);
+
+        HEADER_HEIGHT = HEADER_TOP_PADDING + _headerFontHeight + HEADER_BOTTOM_PADDING;
+        ITEM_HEIGHT = ROW_TOP_PADDING
+            + _titleFontHeight + LINE_SPACING
+            + _timeFontHeight + ROW_BOTTOM_PADDING;
+    }
+
+    private function configureStaticDrawables() as Void {
+        var noEventsLabel = getTextDrawable("NoEventsLabel");
+        if (noEventsLabel != null) {
+            noEventsLabel.setText("No events");
+            noEventsLabel.setLocation(_viewWidth / 2, _viewHeight / 2);
         }
-        return isoDateTime;
+
+        var syncStatusLabel = getTextDrawable("SyncStatusLabel");
+        if (syncStatusLabel != null) {
+            syncStatusLabel.setLocation(_viewWidth / 2, _viewHeight - 20);
+        }
+    }
+
+    private function syncDrawables() as Void {
+        var noEventsLabel = getTextDrawable("NoEventsLabel");
+        var syncStatusLabel = getTextDrawable("SyncStatusLabel");
+
+        hideAllRows();
+
+        if (_events.size() == 0) {
+            if (noEventsLabel != null) {
+                noEventsLabel.setVisible(true);
+            }
+            updateSyncStatusLabel(syncStatusLabel, _viewHeight - 26);
+            return;
+        }
+
+        if (noEventsLabel != null) {
+            noEventsLabel.setVisible(false);
+        }
+
+        var rowY = HEADER_HEIGHT - _scrollOffset;
+        var slot = 0;
+        for (var i = 0; i < _events.size() && slot < MAX_VISIBLE_ROWS; i++) {
+            if (rowY + ITEM_HEIGHT > 0 && rowY < _viewHeight) {
+                updateRowSlot(slot, _events[i], rowY);
+                slot += 1;
+            }
+            rowY += ITEM_HEIGHT;
+        }
+
+        if (rowY + STATUS_HEIGHT + FOOTER_BOTTOM_PADDING > 0 && rowY < _viewHeight) {
+            updateSyncStatusLabel(syncStatusLabel, rowY + 4);
+        } else if (syncStatusLabel != null) {
+            syncStatusLabel.setVisible(false);
+        }
+    }
+
+    private function updateRowSlot(slot as Number, event as Dictionary, rowY as Number) as Void {
+        var rowWidth = _viewWidth - (CONTENT_SIDE_PADDING * 2);
+        var textX = CONTENT_SIDE_PADDING + TEXT_LEFT_PADDING;
+
+        var decor = getRowDecor(slot);
+        if (decor != null) {
+            decor.setLocation(CONTENT_SIDE_PADDING, rowY);
+            decor.setSize(rowWidth, ITEM_HEIGHT);
+            decor.configure(ITEM_HEIGHT, getEventColor(event));
+            decor.setVisible(true);
+        }
+
+        var titleLabel = getTextDrawable(getRowDrawableId(slot, "Title"));
+        if (titleLabel != null) {
+            titleLabel.setText(getEventTitle(event));
+            titleLabel.setLocation(textX, rowY + ROW_TOP_PADDING);
+            titleLabel.setVisible(true);
+        }
+
+        var timeLabel = getTextDrawable(getRowDrawableId(slot, "Time"));
+        if (timeLabel != null) {
+            timeLabel.setText(getEventTime(event));
+            timeLabel.setLocation(textX, rowY + ROW_TOP_PADDING + _titleFontHeight + LINE_SPACING);
+            timeLabel.setVisible(true);
+        }
+    }
+
+    private function updateSyncStatusLabel(syncStatusLabel as WatchUi.Text or Null, y as Number) as Void {
+        if (syncStatusLabel == null) {
+            return;
+        }
+
+        var status = getSyncStatus();
+        syncStatusLabel.setText(status.get("text") as String);
+        syncStatusLabel.setColor(status.get("color") as Number);
+        syncStatusLabel.setLocation(_viewWidth / 2, y);
+        syncStatusLabel.setVisible(true);
+    }
+
+    private function hideAllRows() as Void {
+        for (var slot = 0; slot < MAX_VISIBLE_ROWS; slot++) {
+            hideRowSlot(slot);
+        }
+    }
+
+    private function hideRowSlot(slot as Number) as Void {
+        var decor = getRowDecor(slot);
+        if (decor != null) {
+            decor.setVisible(false);
+        }
+
+        var titleLabel = getTextDrawable(getRowDrawableId(slot, "Title"));
+        if (titleLabel != null) {
+            titleLabel.setVisible(false);
+        }
+
+        var timeLabel = getTextDrawable(getRowDrawableId(slot, "Time"));
+        if (timeLabel != null) {
+            timeLabel.setVisible(false);
+        }
+
+    }
+
+    private function getRowDecor(slot as Number) as EventRowDecorationDrawable or Null {
+        var drawable = findDrawableById(getRowDrawableId(slot, "Decor"));
+        if (drawable != null && drawable instanceof EventRowDecorationDrawable) {
+            return drawable as EventRowDecorationDrawable;
+        }
+        return null;
+    }
+
+    private function getTextDrawable(id as String) as WatchUi.Text or Null {
+        var drawable = findDrawableById(id);
+        if (drawable != null && drawable instanceof WatchUi.Text) {
+            return drawable as WatchUi.Text;
+        }
+        return null;
+    }
+
+    private function getRowDrawableId(slot as Number, suffix as String) as String {
+        return "Row" + slot.toString() + suffix;
+    }
+
+    private function getEventColor(event as Dictionary) as Number {
+        var colorStr = event.get("calendarColor");
+        if (colorStr != null && colorStr instanceof String) {
+            return parseColor(colorStr as String);
+        }
+        return Graphics.COLOR_BLUE;
+    }
+
+    private function getEventTitle(event as Dictionary) as String {
+        var title = event.get("title");
+        if (title == null) {
+            return "(No title)";
+        }
+        return title as String;
+    }
+
+    private function getEventTime(event as Dictionary) as String {
+        if (event.get("isAllDay") == true) {
+            return "All day";
+        }
+
+        var startTime = event.get("startDateTime");
+        if (startTime != null && startTime instanceof String) {
+            return formatEventStart(startTime as String);
+        }
+
+        return "";
+    }
+
+    private function formatEventStart(isoDateTime as String) as String {
+        var parts = parseIsoDateParts(isoDateTime);
+        if (parts == null) {
+            return isoDateTime;
+        }
+
+        var month = parts.get("month") as Number;
+        var day = parts.get("day") as Number;
+        var hour = parts.get("hour") as Number;
+        var min = parts.get("min") as Number;
+        var weekday = parts.get("weekday") as Number;
+        var eventDateValue = parts.get("dateValue") as Number;
+
+        var nowInfo = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
+        var todayValue = encodeDateValue(nowInfo.year, nowInfo.month, nowInfo.day);
+
+        if (eventDateValue > todayValue && daysBetweenDates(todayValue, eventDateValue) > 6) {
+            return pad2(month) + "-" + pad2(day) + " " + pad2(hour) + ":" + pad2(min);
+        }
+
+        return WEEKDAY_ABBR[weekday] + " " + pad2(hour) + ":" + pad2(min);
+    }
+
+    private function parseIsoDateParts(isoDateTime as String) as Dictionary or Null {
+        var tIndex = isoDateTime.find("T");
+        if (tIndex == null || tIndex < 10 || isoDateTime.length() < (tIndex as Number) + 6) {
+            return null;
+        }
+
+        try {
+            var year = isoDateTime.substring(0, 4).toNumber();
+            var month = isoDateTime.substring(5, 7).toNumber();
+            var day = isoDateTime.substring(8, 10).toNumber();
+            var hour = isoDateTime.substring((tIndex as Number) + 1, (tIndex as Number) + 3).toNumber();
+            var min = isoDateTime.substring((tIndex as Number) + 4, (tIndex as Number) + 6).toNumber();
+
+            if (year == null || month == null || day == null || hour == null || min == null) {
+                return null;
+            }
+
+            return {
+                "year" => year,
+                "month" => month,
+                "day" => day,
+                "hour" => hour,
+                "min" => min,
+                "weekday" => getWeekday(year as Number, month as Number, day as Number),
+                "dateValue" => encodeDateValue(year as Number, month as Number, day as Number)
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    private function getWeekday(year as Number, month as Number, day as Number) as Number {
+        var adjustedMonth = month;
+        var adjustedYear = year;
+        if (adjustedMonth < 3) {
+            adjustedMonth += 12;
+            adjustedYear -= 1;
+        }
+
+        var century = adjustedYear / 100;
+        var yearOfCentury = adjustedYear % 100;
+        var h = (day
+            + (((13 * (adjustedMonth + 1)) / 5).toNumber())
+            + yearOfCentury
+            + ((yearOfCentury / 4).toNumber())
+            + ((century / 4).toNumber())
+            + (5 * century)) % 7;
+
+        return ((h + 6) % 7).toNumber();
+    }
+
+    private function daysBetweenDates(startValue as Number, endValue as Number) as Number {
+        if (endValue <= startValue) {
+            return 0;
+        }
+
+        var startParts = decodeDateValue(startValue);
+        var endParts = decodeDateValue(endValue);
+        return toOrdinalDay(endParts.get("year") as Number, endParts.get("month") as Number, endParts.get("day") as Number)
+            - toOrdinalDay(startParts.get("year") as Number, startParts.get("month") as Number, startParts.get("day") as Number);
+    }
+
+    private function encodeDateValue(year as Number, month as Number, day as Number) as Number {
+        return (year * 10000) + (month * 100) + day;
+    }
+
+    private function decodeDateValue(value as Number) as Dictionary {
+        return {
+            "year" => (value / 10000).toNumber(),
+            "month" => ((value / 100) % 100).toNumber(),
+            "day" => (value % 100).toNumber()
+        };
+    }
+
+    private function toOrdinalDay(year as Number, month as Number, day as Number) as Number {
+        var days = day;
+        for (var currentMonth = 1; currentMonth < month; currentMonth++) {
+            days += getDaysInMonth(year, currentMonth);
+        }
+
+        return days + daysBeforeYear(year);
+    }
+
+    private function daysBeforeYear(year as Number) as Number {
+        var previousYear = year - 1;
+        return (previousYear * 365)
+            + ((previousYear / 4).toNumber())
+            - ((previousYear / 100).toNumber())
+            + ((previousYear / 400).toNumber());
+    }
+
+    private function getDaysInMonth(year as Number, month as Number) as Number {
+        if (month == 2) {
+            if (isLeapYear(year)) {
+                return 29;
+            }
+            return 28;
+        }
+
+        if (month == 4 || month == 6 || month == 9 || month == 11) {
+            return 30;
+        }
+
+        return 31;
+    }
+
+    private function isLeapYear(year as Number) as Boolean {
+        if ((year % 400) == 0) {
+            return true;
+        }
+        if ((year % 100) == 0) {
+            return false;
+        }
+        return (year % 4) == 0;
     }
 
     //! Parses a hex color string to a Garmin color value.
@@ -225,19 +452,6 @@ class G365CalendarView extends WatchUi.View {
             // Fall through
         }
         return Graphics.COLOR_BLUE;
-    }
-
-    //! Draws sync status footer message.
-    private function drawSyncStatus(dc as Dc, x as Number, y as Number, w as Number) as Void {
-        var status = getSyncStatus();
-        dc.setColor(status.get("color") as Number, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(
-            x + w,
-            y + 4,
-            Graphics.FONT_XTINY,
-            status.get("text") as String,
-            Graphics.TEXT_JUSTIFY_RIGHT
-        );
     }
 
     //! Returns sync status text and color based on age.
