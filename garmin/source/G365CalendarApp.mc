@@ -12,7 +12,6 @@ class G365CalendarApp extends Application.AppBase {
     }
 
     function onStart(state as Dictionary?) as Void {
-        DebugData.initializeFromResourceIfDebug();
         DataReceiver.startListening();
     }
 

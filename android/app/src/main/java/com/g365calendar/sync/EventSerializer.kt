@@ -37,10 +37,11 @@ class EventSerializer
          * The watch app reads the "events" key to get the JSON payload.
          */
         fun toTransferMap(events: List<DisplayEvent>): Map<String, Any> {
+            val normalizedEvents = normalizeDescriptions(events)
             return mapOf(
-                "events" to serialize(events),
+                "events" to normalizedEvents.map { event -> event.toTransferMap() },
                 "syncTimestamp" to System.currentTimeMillis(),
-                "eventCount" to events.size,
+                "eventCount" to normalizedEvents.size,
             )
         }
 
@@ -53,5 +54,24 @@ class EventSerializer
                     event.copy(description = description.take(MAX_DESCRIPTION_LENGTH))
                 }
             }
+        }
+
+        private fun DisplayEvent.toTransferMap(): Map<String, Any> {
+            val values =
+                linkedMapOf<String, Any>(
+                    "id" to id,
+                    "title" to title,
+                    "startDateTime" to startDateTime,
+                    "startTimeZone" to startTimeZone,
+                    "endDateTime" to endDateTime,
+                    "endTimeZone" to endTimeZone,
+                    "isAllDay" to isAllDay,
+                    "calendarName" to calendarName,
+                )
+
+            location?.let { values["location"] = it }
+            calendarColor?.let { values["calendarColor"] = it }
+            description?.let { values["description"] = it }
+            return values
         }
     }

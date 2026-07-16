@@ -72,6 +72,11 @@ class EventSerializerTest {
         assertTrue(map.containsKey("syncTimestamp"))
         assertTrue(map.containsKey("eventCount"))
         assertEquals(1, map["eventCount"])
+
+        val transferEvents = map["events"] as List<*>
+        val firstEvent = transferEvents.single() as Map<*, *>
+        assertEquals(testEvent.title, firstEvent["title"])
+        assertEquals(testEvent.description, firstEvent["description"])
     }
 
     @Test
