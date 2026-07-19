@@ -49,7 +49,6 @@ class SyncManager
         private val calendarRepository: CalendarRepository,
         private val calendarPreferences: CalendarPreferences,
         private val garminConnector: GarminConnector,
-        private val sampleEventDataSource: SampleEventDataSource,
     ) {
         /** Performs a full sync: fetches selected calendar events and sends to watch. */
         suspend fun performSync(): SyncResult {
@@ -58,7 +57,7 @@ class SyncManager
             val selectedIds = calendarPreferences.selectedCalendarIds.first()
             if (selectedIds.isEmpty()) {
                 Timber.w("SyncManager: no calendars selected")
-                return syncSampleEventsOrNoCalendarsSelected()
+                return SyncResult.NoCalendarsSelected
             }
 
             val allCalendars =
@@ -71,23 +70,13 @@ class SyncManager
 
             val selectedCalendars = allCalendars.filter { it.id in selectedIds }
             if (selectedCalendars.isEmpty()) {
-                return syncSampleEventsOrNoCalendarsSelected()
+                return SyncResult.NoCalendarsSelected
             }
 
             val events = calendarRepository.getEvents(selectedCalendars)
             Timber.d("SyncManager: fetched ${events.size} events from ${selectedCalendars.size} calendars")
 
             return sendEvents(events)
-        }
-
-        private suspend fun syncSampleEventsOrNoCalendarsSelected(): SyncResult {
-            val sampleEvents = sampleEventDataSource.loadEvents()
-            if (sampleEvents.isEmpty()) {
-                return SyncResult.NoCalendarsSelected
-            }
-
-            Timber.d("SyncManager: sending ${sampleEvents.size} sample events")
-            return sendEvents(sampleEvents)
         }
 
         private suspend fun sendEvents(events: List<DisplayEvent>): SyncResult {

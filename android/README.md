@@ -15,6 +15,7 @@ The Android app is the companion application for G365Calendar. It authenticates 
 - JDK 17 or later
 - Android SDK with API 26+ and compile SDK 35
 - A Microsoft Entra app registration with the `Calendars.Read` permission
+  - References: [Register an application with the Microsoft identity platform](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app), [How to add a redirect URI for a public client/native app](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url), [Microsoft Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference), and [MSAL for Android configuration](https://learn.microsoft.com/en-us/entra/msal/android/configure-your-app).
 - Garmin Connect Mobile installed on the phone
 - The G365Calendar watch app installed on the paired Garmin device
 

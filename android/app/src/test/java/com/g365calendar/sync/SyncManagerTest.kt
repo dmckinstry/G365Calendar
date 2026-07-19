@@ -19,7 +19,6 @@ class SyncManagerTest {
     private lateinit var calendarRepository: CalendarRepository
     private lateinit var calendarPreferences: CalendarPreferences
     private lateinit var garminConnector: GarminConnector
-    private lateinit var sampleEventDataSource: SampleEventDataSource
     private lateinit var syncManager: SyncManager
 
     private val testCalendar =
@@ -49,15 +48,13 @@ class SyncManagerTest {
         calendarRepository = mockk()
         calendarPreferences = mockk()
         garminConnector = mockk()
-        sampleEventDataSource = mockk()
-        syncManager = SyncManager(calendarRepository, calendarPreferences, garminConnector, sampleEventDataSource)
+        syncManager = SyncManager(calendarRepository, calendarPreferences, garminConnector)
     }
 
     @Test
     fun `performSync returns NoCalendarsSelected when none selected`() =
         runTest {
             every { calendarPreferences.selectedCalendarIds } returns flowOf(emptySet())
-            every { sampleEventDataSource.loadEvents() } returns emptyList()
 
             val result = syncManager.performSync()
 
@@ -65,16 +62,14 @@ class SyncManagerTest {
         }
 
     @Test
-    fun `performSync sends sample events when none selected and sample data exists`() =
+    fun `performSync returns NoCalendarsSelected when selected calendars are unavailable`() =
         runTest {
-            every { calendarPreferences.selectedCalendarIds } returns flowOf(emptySet())
-            every { sampleEventDataSource.loadEvents() } returns listOf(testEvent)
-            coEvery { garminConnector.sendEvents(listOf(testEvent)) } returns true
+            every { calendarPreferences.selectedCalendarIds } returns flowOf(setOf("missing-calendar"))
+            coEvery { calendarRepository.getCalendars() } returns listOf(testCalendar)
 
             val result = syncManager.performSync()
 
-            assertTrue(result is SyncResult.Success)
-            assertEquals(1, (result as SyncResult.Success).eventCount)
+            assertTrue(result is SyncResult.NoCalendarsSelected)
         }
 
     @Test
