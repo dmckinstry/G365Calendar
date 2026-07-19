@@ -15,6 +15,8 @@ The Android app is the companion application for G365Calendar. It authenticates 
 - JDK 17 or later
 - Android SDK with API 26+ and compile SDK 35
 - A Microsoft Entra app registration with the `Calendars.Read` permission
+- Garmin Connect Mobile installed on the phone
+- The G365Calendar watch app installed on the paired Garmin device
 
 ## Azure app registration
 
@@ -25,6 +27,12 @@ The Android app is the companion application for G365Calendar. It authenticates 
 5. Update the MSAL config at [app/src/main/res/raw/msal_config.json](app/src/main/res/raw/msal_config.json) with the client ID.
 
 ## Build and test
+
+The Android companion now uses Garmin's Maven Central artifact
+`com.garmin.connectiq:ciq-companion-app-sdk` and initializes the SDK in
+wireless mode. When the app UI is opened, Garmin's SDK can prompt the user to
+install or upgrade Garmin Connect Mobile if required. Background sync paths
+reuse the same connector with non-UI initialization.
 
 From the android folder, use `make` as follows:
 

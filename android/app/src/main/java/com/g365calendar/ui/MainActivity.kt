@@ -14,13 +14,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.g365calendar.sync.GarminConnector
 import com.g365calendar.ui.theme.g365CalendarTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var garminConnector: GarminConnector
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        garminConnector.initialize(this, autoUi = true)
         enableEdgeToEdge()
         setContent {
             g365CalendarTheme {

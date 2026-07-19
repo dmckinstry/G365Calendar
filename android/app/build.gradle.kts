@@ -102,6 +102,9 @@ dependencies {
     // Logging
     implementation(libs.timber)
 
+    // Garmin Connect IQ Mobile SDK
+    implementation(libs.garmin.connectiq)
+
     // Testing
     testImplementation(libs.junit5.api)
     testRuntimeOnly(libs.junit5.engine)
