@@ -25,7 +25,41 @@ The Android app is the companion application for G365Calendar. It authenticates 
 2. Add a public client/native redirect URI of `msauth://com.g365calendar/auth`.
 3. Grant the app the `Microsoft Graph → Calendars.Read` permission.
 4. Copy the application (client) ID.
-5. Update the MSAL config at [app/src/main/res/raw/msal_config.json](app/src/main/res/raw/msal_config.json) with the client ID.
+5. Provide the client ID to the Android build using one of these inputs:
+   - Add `azureAppId=<your-client-id>` to `android/local.properties`
+   - Add `azureAppId=<your-client-id>` to `android/gradle.properties`
+   - Export `AZURE_APP_ID=<your-client-id>` before running Gradle for CI or other non-local builds
+
+The app now generates its packaged MSAL config from [app/msal_config.json.template](app/msal_config.json.template) at build time, so there is no checked-in client ID to edit.
+
+## Optional build configuration
+
+The Android build resolves calendar-read configuration in this order:
+
+1. Gradle property
+2. `local.properties`
+3. Environment variable
+
+| Purpose | Gradle or `local.properties` key | Environment variable | Default |
+| --- | --- | --- | --- |
+| Azure app registration client ID | `azureAppId` | `AZURE_APP_ID` | None; required for sign-in |
+| Azure tenant ID for single-tenant sign-in | `azureTenantId` | `AZURE_TENANT_ID` | Multi-tenant (`AzureADMultipleOrgs`) |
+| Microsoft Graph scopes | `graphScopes` | `GRAPH_SCOPES` | `Calendars.Read` |
+| Microsoft Graph base URL | `graphBaseUrl` | `GRAPH_BASE_URL` | `https://graph.microsoft.com/v1.0/` |
+
+When `azureTenantId` is set, the generated MSAL config switches to `AzureADMyOrg` and includes that tenant ID. Leave it unset for multi-tenant sign-in.
+
+Example local development config in `android/local.properties`:
+
+```properties
+sdk.dir=/Users/you/android-sdk
+azureAppId=YOUR_AZURE_APP_ID
+azureTenantId=YOUR_AZURE_TENANT_ID
+graphScopes=Calendars.Read
+graphBaseUrl=https\://graph.microsoft.com/v1.0/
+```
+
+For CI and other non-local builds, prefer `AZURE_APP_ID`, `AZURE_TENANT_ID`, `GRAPH_SCOPES`, and `GRAPH_BASE_URL` instead of checked-in or shared Gradle properties.
 
 ## Build and test
 

@@ -1,12 +1,12 @@
 {
-  "client_id": "YOUR_AZURE_AD_CLIENT_ID",
+  "client_id": "__AZURE_APP_ID__",
   "authorization_user_agent": "DEFAULT",
   "redirect_uri": "msauth://com.g365calendar/auth",
   "authorities": [
     {
       "type": "AAD",
       "audience": {
-        "type": "AzureADMultipleOrgs"
+        "type": "__AZURE_AUTHORITY_AUDIENCE_TYPE__"__AZURE_TENANT_ID_JSON__
       }
     }
   ],

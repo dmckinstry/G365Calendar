@@ -1,5 +1,6 @@
 package com.g365calendar.di
 
+import com.g365calendar.BuildConfig
 import com.g365calendar.data.api.AuthInterceptor
 import com.g365calendar.data.api.GraphCalendarApi
 import com.squareup.moshi.Moshi
@@ -18,8 +19,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    private const val GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0/"
-
     @Provides
     @Singleton
     fun provideMoshi(): Moshi {
@@ -50,7 +49,7 @@ object NetworkModule {
         moshi: Moshi,
     ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(GRAPH_BASE_URL)
+            .baseUrl(BuildConfig.GRAPH_BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()

@@ -1,6 +1,7 @@
 package com.g365calendar.auth
 
 import android.app.Activity
+import com.g365calendar.BuildConfig
 import com.microsoft.identity.client.AcquireTokenParameters
 import com.microsoft.identity.client.AcquireTokenSilentParameters
 import com.microsoft.identity.client.AuthenticationCallback
@@ -25,7 +26,12 @@ class AuthManager
         private val msalApp: ISingleAccountPublicClientApplication,
     ) {
         companion object {
-            val SCOPES = arrayOf("Calendars.Read")
+            val SCOPES =
+                BuildConfig.GRAPH_SCOPES
+                    .split(',')
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .toTypedArray()
         }
 
         /** Attempts silent token acquisition; returns null if interactive auth is required. */

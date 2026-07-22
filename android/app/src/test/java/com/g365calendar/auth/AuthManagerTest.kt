@@ -1,5 +1,6 @@
 package com.g365calendar.auth
 
+import com.g365calendar.BuildConfig
 import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.ICurrentAccountResult
 import com.microsoft.identity.client.ISingleAccountPublicClientApplication
@@ -42,5 +43,10 @@ class AuthManagerTest {
     @Test
     fun `SCOPES contains Calendars Read`() {
         assertTrue(AuthManager.SCOPES.contains("Calendars.Read"))
+    }
+
+    @Test
+    fun `SCOPES matches configured graph scopes`() {
+        assertTrue(AuthManager.SCOPES.contentEquals(BuildConfig.GRAPH_SCOPES.split(',').map(String::trim).filter(String::isNotEmpty).toTypedArray()))
     }
 }

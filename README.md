@@ -29,7 +29,8 @@ Garmin watch app (Monkey C / Connect IQ)
    - [android/README.md](android/README.md) for Android setup, build, and test instructions
    - [garmin/README.md](garmin/README.md) for Garmin build and device-specific instructions
 2. Configure the Microsoft 365 app registration for the Android app.
-3. Follow the Android and Garmin setup steps in their respective guides.
+3. Set the Android calendar configuration through `local.properties`, Gradle properties, or environment variables as documented in [android/README.md](android/README.md).
+4. Follow the Android and Garmin setup steps in their respective guides.
 
 ## Common prerequisites
 
@@ -37,6 +38,11 @@ Garmin watch app (Monkey C / Connect IQ)
 - Android SDK with API 26+ and compile SDK 35
 - Garmin Connect IQ SDK and a Garmin developer account
 - A Microsoft Entra app registration with the `Calendars.Read` permission
+
+## Configuration notes
+
+- The Android companion generates its packaged MSAL config at build time rather than storing the Azure client ID in a checked-in resource file.
+- Android development requires `android/local.properties` for `azureAppId`, `azureTenantId`, `graphScopes`, and `graphBaseUrl` in local builds and/or `AZURE_APP_ID`, `AZURE_TENANT_ID`, `GRAPH_SCOPES`, and `GRAPH_BASE_URL` for all builds.
 
 ## Build and test
 
