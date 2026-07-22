@@ -203,6 +203,7 @@ dependencies {
     // Testing
     testImplementation(libs.junit5.api)
     testRuntimeOnly(libs.junit5.engine)
+    testRuntimeOnly(libs.junit5.launcher)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
@@ -212,6 +213,32 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    if (name != "integrationTest") {
+        useJUnitPlatform {
+            excludeTags("integration")
+        }
+    }
+    testLogging {
+        events("passed", "failed", "skipped")
+        showStandardStreams = true
+    }
+}
+
+val integrationTest by tasks.registering(Test::class) {
+    description = "Runs integration-tagged Android JVM tests against Microsoft Graph."
+    group = "verification"
+
+    val debugUnitTest = tasks.named<Test>("testDebugUnitTest")
+
+    dependsOn("compileDebugUnitTestSources")
+    testClassesDirs = debugUnitTest.get().testClassesDirs
+    classpath = debugUnitTest.get().classpath
+    shouldRunAfter(debugUnitTest)
+
+    useJUnitPlatform {
+        includeTags("integration")
+    }
+
     testLogging {
         events("passed", "failed", "skipped")
         showStandardStreams = true

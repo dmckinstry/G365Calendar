@@ -75,7 +75,35 @@ From the android folder, use `make` as follows:
 | --- | --- | --- |
 | `make build-android` or `make build` | `./gradlew assembleDebug` | Builds the Android debug APK. |
 | `make test-android` or `make test` | `./gradlew test` | Runs the Android unit tests. |
+| `make test-integration-android` or `make test-integration` | `./gradlew integrationTest` | Runs the live Microsoft Graph integration tests. Requires `GRAPH_ACCESS_TOKEN` with `Calendars.Read`. |
 | `make dev-android` or `make dev` | `emulator`... and `./gradlew installDebug` | Attempts to launch the `Pixel_8_API_36` emulator (if needed) and then installs the debug build. |
+
+The integration tests are tagged separately from the normal unit suite, so they are excluded from `./gradlew test` and `make test` by default.
+
+The current live integration coverage verifies two Microsoft Graph paths:
+
+- Calendar discovery through `GET /me/calendars`
+- Event retrieval for the calendar whose display name is exactly `Calendar`
+
+The event retrieval test assumes that the signed-in Microsoft 365 account exposes a calendar named `Calendar`. If that calendar does not exist for the token's user, the test fails by design.
+
+`GRAPH_ACCESS_TOKEN` is required because the integration test creates a direct Retrofit client and only adds an `Authorization: Bearer ...` header. It does not launch MSAL, open an interactive sign-in flow, or reuse a cached app session, so there is no other credential source available during the JVM test run.
+
+You can create the token using either of these Microsoft-documented flows:
+
+- Graph Explorer: sign in, consent to `Calendars.Read`, then copy the token from the **Access token** tab. See <https://learn.microsoft.com/en-us/graph/graph-explorer/graph-explorer-overview> and <https://learn.microsoft.com/en-us/graph/graph-explorer/graph-explorer-features>.
+- Device code or other delegated user auth flow: follow Microsoft's authentication guidance and request a delegated token that includes `Calendars.Read`. See <https://learn.microsoft.com/en-us/graph/tutorials/java-authentication> and <https://learn.microsoft.com/en-us/graph/sdks/choose-authentication-providers>.
+
+The token is a short-lived bearer token. If the integration test starts failing with `401` or `403`, refresh the token and verify that the delegated scopes include `Calendars.Read`.
+
+If the calendar-specific test fails, first confirm that the token belongs to the intended user and that the account has a calendar named `Calendar`.
+
+Example:
+
+```bash
+export GRAPH_ACCESS_TOKEN="<bearer-token-with-Calendars.Read>"
+make test-integration
+```
 
 ## Project structure
 

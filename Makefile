@@ -1,4 +1,4 @@
-.PHONY: build build-android build-garmin test test-android test-garmin dev dev-android dev-garmin clean clean-android clean-garmin clean-garming
+.PHONY: build build-android build-garmin test test-android test-garmin test-integration test-integration-android dev dev-android dev-garmin clean clean-android clean-garmin clean-garming
 
 ANDROID_DIR ?= android
 GARMIN_DIR ?= garmin
@@ -28,6 +28,12 @@ test-garmin:
 	$(MAKE) -C $(GARMIN_DIR) test
 
 test: test-android test-garmin
+
+test-integration:
+	$(MAKE) -C $(ANDROID_DIR) test-integration
+
+test-integration-android:
+	$(MAKE) -C $(ANDROID_DIR) test-integration
 
 dev-android:
 	$(MAKE) -C $(ANDROID_DIR) dev

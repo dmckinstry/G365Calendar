@@ -52,6 +52,7 @@ From the project root, use the repo-level Make targets as follows:
 | --- | --- | --- |
 | `make build` | `make -C android build` and `make -C garmin build` | Builds both the Android and Garmin apps. |
 | `make test` | `make -C android test` and `make -C garmin test` | Runs the Android and Garmin test workflows. |
+| `make test-integration` | `make -C android test-integration` | Runs the live Microsoft Graph integration tests for the Android app only. Requires a `GRAPH_ACCESS_TOKEN` bearer token with `Calendars.Read`; see the token setup notes in [android/README.md](android/README.md). |
 | `make dev` | `make -C android dev` and `make -C garmin dev` | Starts the Android and Garmin development flows. |
 
 ## Notes
