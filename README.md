@@ -29,7 +29,8 @@ Garmin watch app (Monkey C / Connect IQ)
    - [android/README.md](android/README.md) for Android setup, build, and test instructions
    - [garmin/README.md](garmin/README.md) for Garmin build and device-specific instructions
 2. Configure the Microsoft 365 app registration for the Android app.
-3. Follow the Android and Garmin setup steps in their respective guides.
+3. Set the Android calendar configuration through `local.properties`, Gradle properties, or environment variables as documented in [android/README.md](android/README.md).
+4. Follow the Android and Garmin setup steps in their respective guides.
 
 ## Common prerequisites
 
@@ -37,6 +38,12 @@ Garmin watch app (Monkey C / Connect IQ)
 - Android SDK with API 26+ and compile SDK 35
 - Garmin Connect IQ SDK and a Garmin developer account
 - A Microsoft Entra app registration with the `Calendars.Read` permission
+
+## Configuration notes
+
+- The Android companion generates its packaged MSAL config at build time rather than storing the Azure client ID in a checked-in resource file.
+- Android development uses `azureAuthorityAudience` to control whether sign-in targets organizational accounts, personal Microsoft accounts, or both; see [android/README.md](android/README.md) for the supported values and defaults.
+- Android development requires `android/local.properties` for `azureAppId`, optional `azureAuthorityAudience`, optional `azureTenantId`, `graphScopes`, and `graphBaseUrl` in local builds and/or `AZURE_APP_ID`, `AZURE_AUTHORITY_AUDIENCE`, `AZURE_TENANT_ID`, `GRAPH_SCOPES`, and `GRAPH_BASE_URL` for all builds.
 
 ## Build and test
 
@@ -46,6 +53,7 @@ From the project root, use the repo-level Make targets as follows:
 | --- | --- | --- |
 | `make build` | `make -C android build` and `make -C garmin build` | Builds both the Android and Garmin apps. |
 | `make test` | `make -C android test` and `make -C garmin test` | Runs the Android and Garmin test workflows. |
+| `make test-integration` | `make -C android test-integration` | Runs the live Microsoft Graph integration tests for the Android app only. Requires a `GRAPH_ACCESS_TOKEN` bearer token with `Calendars.Read`; see the token setup notes in [android/README.md](android/README.md). |
 | `make dev` | `make -C android dev` and `make -C garmin dev` | Starts the Android and Garmin development flows. |
 
 ## Notes
@@ -53,6 +61,7 @@ From the project root, use the repo-level Make targets as follows:
 - The Android app performs background sync every 60 minutes via WorkManager.
 - The Garmin app caches recent events locally for offline viewing.
 - The current implementation targets Android and Garmin wearables; iOS support is not included.
+- Full end-to-end companion communication debugging is limited by the Garmin Connect Mobile / Connect IQ ecosystem: Android emulators cannot fully emulate the required phone-to-watch companion path, so validating message exchange typically requires a real Android phone with Garmin Connect Mobile and a paired Garmin device.
 
 ## License
 

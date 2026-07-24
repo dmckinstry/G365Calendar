@@ -11,8 +11,15 @@ class G365CalendarApp extends Application.AppBase {
         AppBase.initialize();
     }
 
+    function isDebug() as Boolean {
+        return true;
+    }
+
     function onStart(state as Dictionary?) as Void {
-        DebugData.initializeFromResourceIfDebug();
+        if (isDebug()) {
+            EventStore.seedDebugEventsIfNeeded();
+        }
+
         DataReceiver.startListening();
     }
 

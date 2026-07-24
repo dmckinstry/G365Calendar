@@ -45,7 +45,10 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable("calendar_selection") {
-                                calendarSelectionScreen()
+                                calendarSelectionScreen(
+                                    onSave = { navController.popBackStack() },
+                                    onCancel = { navController.popBackStack() },
+                                )
                             }
                         }
                     }

@@ -62,6 +62,17 @@ class SyncManagerTest {
         }
 
     @Test
+    fun `performSync returns NoCalendarsSelected when selected calendars are unavailable`() =
+        runTest {
+            every { calendarPreferences.selectedCalendarIds } returns flowOf(setOf("missing-calendar"))
+            coEvery { calendarRepository.getCalendars() } returns listOf(testCalendar)
+
+            val result = syncManager.performSync()
+
+            assertTrue(result is SyncResult.NoCalendarsSelected)
+        }
+
+    @Test
     fun `performSync returns Success when events sent`() =
         runTest {
             every { calendarPreferences.selectedCalendarIds } returns flowOf(setOf("cal-1"))

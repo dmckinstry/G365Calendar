@@ -31,9 +31,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:host="com.g365calendar"
-                    android:path="/auth"
-                    android:scheme="msauth" />
+                    android:host="${msalRedirectHost}"
+                    android:path="${msalRedirectPath}"
+                    android:scheme="${msalRedirectScheme}" />
             </intent-filter>
         </activity>
     </application>

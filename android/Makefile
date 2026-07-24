@@ -1,4 +1,4 @@
-.PHONY: build build-android test test-android dev dev-android
+.PHONY: build build-android test test-android test-integration test-integration-android dev dev-android clean clean-android
 
 ANDROID_DIR ?= .
 GRADLE ?= ./gradlew
@@ -8,10 +8,20 @@ build: build-android
 build-android:
 	cd $(ANDROID_DIR) && $(GRADLE) assembleDebug
 
+clean: clean-android
+
+clean-android:
+	cd $(ANDROID_DIR) && $(GRADLE) clean
+
 test: test-android
 
 test-android:
 	cd $(ANDROID_DIR) && $(GRADLE) test
+
+test-integration: test-integration-android
+
+test-integration-android:
+	cd $(ANDROID_DIR) && $(GRADLE) integrationTest
 
 dev: dev-android
 

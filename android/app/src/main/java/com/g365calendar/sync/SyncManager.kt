@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.g365calendar.data.model.DisplayEvent
 import com.g365calendar.data.preferences.CalendarPreferences
 import com.g365calendar.data.repository.CalendarRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -75,6 +76,10 @@ class SyncManager
             val events = calendarRepository.getEvents(selectedCalendars)
             Timber.d("SyncManager: fetched ${events.size} events from ${selectedCalendars.size} calendars")
 
+            return sendEvents(events)
+        }
+
+        private suspend fun sendEvents(events: List<DisplayEvent>): SyncResult {
             val sent = garminConnector.sendEvents(events)
             return if (sent) {
                 SyncResult.Success(events.size)

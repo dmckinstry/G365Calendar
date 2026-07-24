@@ -25,6 +25,9 @@ class CalendarSelectionViewModel
         private val _calendars = MutableStateFlow<List<Calendar>>(emptyList())
         val calendars: StateFlow<List<Calendar>> = _calendars.asStateFlow()
 
+        private val _draftSelectedCalendarIds = MutableStateFlow<Set<String>>(emptySet())
+        val draftSelectedCalendarIds: StateFlow<Set<String>> = _draftSelectedCalendarIds.asStateFlow()
+
         private val _isLoading = MutableStateFlow(false)
         val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -34,6 +37,25 @@ class CalendarSelectionViewModel
         val selectedCalendarIds: StateFlow<Set<String>> =
             calendarPreferences.selectedCalendarIds
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+        private var lastPersistedSelection: Set<String>? = null
+
+        fun initializeSelectionDraft(selectedIds: Set<String>) {
+            if (lastPersistedSelection == selectedIds) {
+                return
+            }
+
+            val shouldRefreshDraft =
+                lastPersistedSelection == null || _draftSelectedCalendarIds.value == lastPersistedSelection
+
+            lastPersistedSelection = selectedIds
+
+            if (!shouldRefreshDraft) {
+                return
+            }
+
+            _draftSelectedCalendarIds.value = selectedIds
+        }
 
         fun loadCalendars() {
             viewModelScope.launch {
@@ -51,8 +73,21 @@ class CalendarSelectionViewModel
         }
 
         fun toggleCalendar(calendarId: String) {
+            _draftSelectedCalendarIds.value =
+                _draftSelectedCalendarIds.value.let { current ->
+                    if (calendarId in current) current - calendarId else current + calendarId
+                }
+        }
+
+        fun saveSelection(onSaved: () -> Unit) {
             viewModelScope.launch {
-                calendarPreferences.toggleCalendar(calendarId)
+                calendarPreferences.setSelectedCalendars(_draftSelectedCalendarIds.value)
+                lastPersistedSelection = _draftSelectedCalendarIds.value
+                onSaved()
             }
+        }
+
+        fun discardSelectionChanges() {
+            _draftSelectedCalendarIds.value = selectedCalendarIds.value
         }
     }

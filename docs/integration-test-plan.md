@@ -3,6 +3,25 @@
 This document describes manual integration test procedures for the G365Calendar system.
 Automated E2E testing is limited by the need for physical Garmin hardware and M365 accounts.
 
+## Automated Microsoft Graph integration tests
+
+The Android companion also includes opt-in JVM integration tests that make live Microsoft Graph calls. These tests are not part of the default `make test` workflow.
+
+### Automated prerequisites
+- A Microsoft Graph delegated bearer token exported as `GRAPH_ACCESS_TOKEN`
+- The token must include the `Calendars.Read` scope
+- The token's user must have a calendar whose display name is exactly `Calendar` for the calendar-event integration test
+
+### Automated execution
+1. Export `GRAPH_ACCESS_TOKEN` in the shell that will run Gradle.
+2. Run `make test-integration` from the repository root, or `make test-integration-android` from the Android workflow.
+3. **Expected**: The live Graph tests verify calendar discovery and event retrieval from the calendar named `Calendar`.
+
+### Automated troubleshooting
+- If the tests fail with an instruction to set `GRAPH_ACCESS_TOKEN`, export the token in the current shell and rerun.
+- If the tests fail with `401` or `403`, refresh the token and confirm that it includes `Calendars.Read`.
+- If the calendar-event test fails because the `Calendar` calendar is missing, use an account that has that calendar or create/rename one for the test scenario.
+
 ## Prerequisites
 - Android device with Garmin Connect app installed
 - Garmin Venu 2, 3, or 4 series watch paired via Bluetooth
