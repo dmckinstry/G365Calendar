@@ -9,15 +9,15 @@ import okhttp3.ResponseBody
 import retrofit2.HttpException
 import timber.log.Timber
 import java.time.Instant
+import java.time.ZonedDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Fetches calendar list and events from Microsoft Graph API.
- * Sync window: 24 hours past → 7 days future.
+ * Sync window: start of yesterday → 14 days future.
  */
 @Singleton
 class CalendarRepository
@@ -27,8 +27,7 @@ class CalendarRepository
         private val authManager: AuthManager,
     ) {
         companion object {
-            private const val PAST_HOURS = 24L
-            private const val FUTURE_DAYS = 7L
+            private const val FUTURE_DAYS = 14L
             private val ISO_FORMATTER: DateTimeFormatter =
                 DateTimeFormatter.ISO_INSTANT
         }
@@ -45,15 +44,15 @@ class CalendarRepository
 
         /**
          * Fetches events for the given calendars within the sync window
-         * (24h past → 7 days future). Merges results into DisplayEvent list.
+         * (start of yesterday → 14 days future). Merges results into DisplayEvent list.
          */
         suspend fun getEvents(
             accountId: String,
             calendars: List<Calendar>,
         ): List<DisplayEvent> {
-            val now = Instant.now()
-            val start = now.minus(PAST_HOURS, ChronoUnit.HOURS)
-            val end = now.plus(FUTURE_DAYS, ChronoUnit.DAYS)
+            val now = ZonedDateTime.now()
+            val start = now.toLocalDate().minusDays(1).atStartOfDay(now.zone).toInstant()
+            val end = now.plusDays(FUTURE_DAYS.toLong()).toInstant()
             val startStr = ISO_FORMATTER.format(start)
             val endStr = ISO_FORMATTER.format(end)
             val authorizationHeader = requireAuthorizationHeader(accountId)

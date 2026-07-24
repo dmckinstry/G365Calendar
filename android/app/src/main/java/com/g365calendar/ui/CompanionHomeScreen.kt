@@ -1,5 +1,6 @@
 package com.g365calendar.ui
 
+import com.g365calendar.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import com.g365calendar.data.model.Calendar
 fun companionHomeScreen(
     viewModel: MainViewModel,
     onNavigateToCalendarSelection: (String) -> Unit,
+    onNavigateToDebug: () -> Unit,
 ) {
     val authStatus by viewModel.authStatus.collectAsState()
     val accounts by viewModel.accounts.collectAsState()
@@ -99,6 +101,15 @@ fun companionHomeScreen(
             }
 
             addAccountButton(viewModel)
+
+            if (BuildConfig.DEBUG) {
+                OutlinedButton(
+                    onClick = onNavigateToDebug,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Debug")
+                }
+            }
         }
     }
 }

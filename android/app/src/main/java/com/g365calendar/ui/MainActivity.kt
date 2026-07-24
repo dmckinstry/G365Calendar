@@ -43,6 +43,9 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToCalendarSelection = { accountId ->
                                         navController.navigate("calendar_selection/${Uri.encode(accountId)}")
                                     },
+                                    onNavigateToDebug = {
+                                        navController.navigate("debug_events")
+                                    },
                                 )
                             }
                             composable("calendar_selection/{accountId}") {
@@ -58,6 +61,14 @@ class MainActivity : ComponentActivity() {
                                         navController.popBackStack()
                                     },
                                     onCancel = { navController.popBackStack() },
+                                )
+                            }
+                            composable("debug_events") {
+                                debugEventsScreen(
+                                    viewModel = mainViewModel,
+                                    onCancel = {
+                                        navController.popBackStack(route = "home", inclusive = false)
+                                    },
                                 )
                             }
                         }

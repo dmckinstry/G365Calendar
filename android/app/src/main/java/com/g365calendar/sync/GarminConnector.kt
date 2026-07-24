@@ -104,13 +104,34 @@ class GarminConnector
          * Returns true if the data was successfully queued for delivery.
          */
         suspend fun sendEvents(events: List<com.g365calendar.data.model.DisplayEvent>): Boolean {
+            return sendPayload(eventSerializer.buildPayload(events))
+        }
+
+        suspend fun sendPayload(payload: ClientEventsPayload): Boolean {
             if (!ensureReady()) {
                 Timber.w("GarminConnector not ready, cannot send events")
                 return false
             }
 
             return try {
-                val transferMap = eventSerializer.toTransferMap(events)
+                val transferMap = mapOf(
+                    "events" to payload.events.map { event ->
+                        linkedMapOf<String, Any>().apply {
+                            put("title", event.title)
+                            put("startDateTime", event.startDateTime)
+                            put("startTimeZone", event.startTimeZone)
+                            put("endDateTime", event.endDateTime)
+                            put("endTimeZone", event.endTimeZone)
+                            put("isAllDay", event.isAllDay)
+                            put("calendarName", event.calendarName)
+                            event.location?.let { put("location", it) }
+                            event.calendarColor?.let { put("calendarColor", it) }
+                            event.description?.let { put("description", it) }
+                        }
+                    },
+                    "syncTimestamp" to System.currentTimeMillis(),
+                    "eventCount" to payload.eventCount,
+                )
                 val sdk = connectIQ ?: return false
                 val devices = sdk.knownDevices.orEmpty()
                 if (devices.isEmpty()) {
@@ -138,7 +159,7 @@ class GarminConnector
                 }
 
                 if (delivered) {
-                    Timber.d("Queued ${events.size} events for Garmin delivery")
+                    Timber.d("Queued ${payload.eventCount} events for Garmin delivery")
                 } else {
                     Timber.w("Unable to deliver events to any connected Garmin device")
                 }

@@ -9,6 +9,8 @@ import com.g365calendar.auth.AuthState
 import com.g365calendar.data.model.Calendar
 import com.g365calendar.data.preferences.CalendarPreferences
 import com.g365calendar.data.repository.CalendarRepository
+import com.g365calendar.sync.EventSerializer
+import com.g365calendar.sync.SelectedEventsProvider
 import com.g365calendar.sync.SyncManager
 import com.g365calendar.sync.SyncResult
 import com.g365calendar.sync.SyncScheduler
@@ -33,6 +35,8 @@ class MainViewModel
         private val authState: AuthState,
         private val calendarPreferences: CalendarPreferences,
         private val calendarRepository: CalendarRepository,
+        private val selectedEventsProvider: SelectedEventsProvider,
+        private val eventSerializer: EventSerializer,
         private val syncManager: SyncManager,
         private val syncScheduler: SyncScheduler,
     ) : ViewModel() {
@@ -58,13 +62,16 @@ class MainViewModel
                         calendarState = calendarState,
                     )
                 }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
         private val _syncStatus = MutableStateFlow<SyncUiState>(SyncUiState.Idle)
         val syncStatus: StateFlow<SyncUiState> = _syncStatus.asStateFlow()
 
         private val _lastSyncTime = MutableStateFlow<Long?>(null)
         val lastSyncTime: StateFlow<Long?> = _lastSyncTime.asStateFlow()
+
+        private val _debugEventsState = MutableStateFlow<DebugEventsUiState>(DebugEventsUiState.Idle)
+        val debugEventsState: StateFlow<DebugEventsUiState> = _debugEventsState.asStateFlow()
 
         init {
             refreshAccounts()
@@ -130,6 +137,21 @@ class MainViewModel
                         is SyncResult.WatchNotConnected -> SyncUiState.Error("Watch not connected")
                         is SyncResult.Error -> SyncUiState.Error(result.message)
                     }
+            }
+        }
+
+        fun loadDebugEvents() {
+            viewModelScope.launch {
+                _debugEventsState.value = DebugEventsUiState.Loading
+
+                try {
+                    val selectedEvents = selectedEventsProvider.loadSelectedEvents()
+                    val payload = eventSerializer.buildPayload(selectedEvents.events)
+                    _debugEventsState.value = DebugEventsUiState.Success(payload.json)
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to load debug events")
+                    _debugEventsState.value = DebugEventsUiState.Error(e.message ?: "Failed to load debug events")
+                }
             }
         }
 
@@ -209,4 +231,14 @@ sealed class CalendarListUiState {
     data class Success(val calendars: List<Calendar>) : CalendarListUiState()
 
     data class Error(val message: String) : CalendarListUiState()
+}
+
+sealed class DebugEventsUiState {
+    data object Idle : DebugEventsUiState()
+
+    data object Loading : DebugEventsUiState()
+
+    data class Success(val json: String) : DebugEventsUiState()
+
+    data class Error(val message: String) : DebugEventsUiState()
 }

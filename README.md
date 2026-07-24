@@ -59,6 +59,7 @@ From the project root, use the repo-level Make targets as follows:
 ## Notes
 
 - The Android app performs background sync every 60 minutes via WorkManager.
+- The Android companion now shapes one canonical event payload after Graph retrieval; the debug screen and Garmin sync path both consume that same sorted, ID-free, size-limited payload.
 - The Garmin app caches recent events locally for offline viewing.
 - The current implementation targets Android and Garmin wearables; iOS support is not included.
 - Full end-to-end companion communication debugging is limited by the Garmin Connect Mobile / Connect IQ ecosystem: Android emulators cannot fully emulate the required phone-to-watch companion path, so validating message exchange typically requires a real Android phone with Garmin Connect Mobile and a paired Garmin device.

@@ -43,12 +43,12 @@ class EventSerializerTest {
         val result = serializer.deserialize(json)
 
         assertEquals(1, result.size)
-        assertEquals(testEvent.id, result[0].id)
         assertEquals(testEvent.title, result[0].title)
         assertEquals(testEvent.location, result[0].location)
         assertEquals(testEvent.calendarName, result[0].calendarName)
         assertEquals(testEvent.calendarColor, result[0].calendarColor)
         assertEquals(testEvent.description, result[0].description)
+        assertTrue(!json.contains("\"id\""))
     }
 
     @Test
@@ -77,6 +77,7 @@ class EventSerializerTest {
         val firstEvent = transferEvents.single() as Map<*, *>
         assertEquals(testEvent.title, firstEvent["title"])
         assertEquals(testEvent.description, firstEvent["description"])
+        assertTrue(!firstEvent.containsKey("id"))
     }
 
     @Test

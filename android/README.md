@@ -8,7 +8,8 @@ The Android app is the companion application for G365Calendar. It authenticates 
 - Multiple-account support on the home screen, with add-account and per-account sign-out actions
 - Calendar reading from Microsoft Graph for accounts with an Exchange Online mailbox available to Graph calendar APIs
 - Account-scoped calendar selection for sync with explicit Save and Cancel actions
-- Signed-in home screen summary showing each account and its currently selected calendars
+- Signed-in home screen summary showing each account email and its currently selected calendars
+- Debug builds expose a Debug screen that shows the same canonical event payload sent to Garmin clients for the currently selected calendars
 - Background sync every 60 minutes using WorkManager
 - Jetpack Compose UI for the companion experience
 
@@ -93,10 +94,15 @@ For CI and other non-local builds, prefer `AZURE_APP_ID`, `AZURE_AUTHORITY_AUDIE
 After one or more accounts are added, the Android home screen shows:
 
 - one card per signed-in account
+- the account email address for that card
 - the currently selected calendars for that account, including each calendar color indicator
-- actions to refresh calendars, open calendar selection, sign out the account, or add another account
+- actions to open the `Calendars` picker, sign out the account, or add another account
 
-The Select Calendars screen loads the available calendars for the selected account, preselects that account's saved calendars, and only persists changes when the user taps Save. Cancel discards any in-progress checkbox changes.
+In debug builds only, the home screen also shows a `Debug` button at the bottom. It opens a screen that renders the same canonical payload that the companion app sends to Garmin clients for the currently selected calendars across the signed-in accounts.
+
+The event query window starts at the beginning of yesterday and continues 14 days into the future. After the Graph calls complete, the app builds a shared canonical payload for downstream clients. That payload merges events from all selected calendars into a single list, sorts them by start time, omits event IDs, normalizes long descriptions, and trims to the most recent prior event plus the following 16 events when the full JSON would exceed 12 KB. The Debug screen renders that payload directly, so the displayed JSON is identical to the JSON content sent onward through companion-client integrations.
+
+If no calendars are selected for an account, the home card shows how many calendars are available for that account. The Calendars screen loads the available calendars for the selected account, preselects that account's saved calendars, and only persists changes when the user taps Save. Cancel discards any in-progress checkbox changes.
 
 ## Build and test
 

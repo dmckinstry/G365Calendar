@@ -1,16 +1,11 @@
 package com.g365calendar.sync
 
-import com.g365calendar.auth.AuthAccount
-import com.g365calendar.auth.AuthManager
 import com.g365calendar.data.model.Calendar
 import com.g365calendar.data.model.DisplayEvent
-import com.g365calendar.data.preferences.CalendarPreferences
-import com.g365calendar.data.repository.CalendarRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -18,13 +13,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class SyncManagerTest {
-    private lateinit var authManager: AuthManager
-    private lateinit var calendarRepository: CalendarRepository
-    private lateinit var calendarPreferences: CalendarPreferences
+    private lateinit var selectedEventsProvider: SelectedEventsProvider
+    private lateinit var eventSerializer: EventSerializer
     private lateinit var garminConnector: GarminConnector
     private lateinit var syncManager: SyncManager
-
-    private val testAccount = AuthAccount(id = "account-1", displayName = "Work User", username = "user@example.com")
 
     private val testCalendar =
         Calendar(
@@ -48,20 +40,40 @@ class SyncManagerTest {
             calendarColor = "#0078D4",
         )
 
+    private val testPayload =
+        ClientEventsPayload(
+            json = "[{\"title\":\"Standup\"}]",
+            events =
+                listOf(
+                    ClientEvent(
+                        title = "Standup",
+                        startDateTime = "2026-02-15T09:00:00",
+                        startTimeZone = "UTC",
+                        endDateTime = "2026-02-15T09:30:00",
+                        endTimeZone = "UTC",
+                        location = "Room A",
+                        isAllDay = false,
+                        calendarName = "Work",
+                        calendarColor = "#0078D4",
+                        description = null,
+                    ),
+                ),
+            eventCount = 1,
+        )
+
     @BeforeEach
     fun setup() {
-        authManager = mockk()
-        calendarRepository = mockk()
-        calendarPreferences = mockk()
+        selectedEventsProvider = mockk()
+        eventSerializer = mockk()
         garminConnector = mockk()
-        syncManager = SyncManager(authManager, calendarRepository, calendarPreferences, garminConnector)
+        syncManager = SyncManager(selectedEventsProvider, eventSerializer, garminConnector)
     }
 
     @Test
     fun `performSync returns NoCalendarsSelected when none selected`() =
         runTest {
-            coEvery { authManager.getAccounts() } returns listOf(testAccount)
-            every { calendarPreferences.selectedCalendarIds(testAccount.id) } returns flowOf(emptySet())
+            coEvery { selectedEventsProvider.loadSelectedEvents() } returns
+                SelectedEventsLoadResult(events = emptyList(), hasAvailableSelectedCalendars = false)
 
             val result = syncManager.performSync()
 
@@ -71,9 +83,8 @@ class SyncManagerTest {
     @Test
     fun `performSync returns NoCalendarsSelected when selected calendars are unavailable`() =
         runTest {
-            coEvery { authManager.getAccounts() } returns listOf(testAccount)
-            every { calendarPreferences.selectedCalendarIds(testAccount.id) } returns flowOf(setOf("missing-calendar"))
-            coEvery { calendarRepository.getCalendars(testAccount.id) } returns listOf(testCalendar)
+            coEvery { selectedEventsProvider.loadSelectedEvents() } returns
+                SelectedEventsLoadResult(events = emptyList(), hasAvailableSelectedCalendars = false)
 
             val result = syncManager.performSync()
 
@@ -83,11 +94,10 @@ class SyncManagerTest {
     @Test
     fun `performSync returns Success when events sent`() =
         runTest {
-            coEvery { authManager.getAccounts() } returns listOf(testAccount)
-            every { calendarPreferences.selectedCalendarIds(testAccount.id) } returns flowOf(setOf("cal-1"))
-            coEvery { calendarRepository.getCalendars(testAccount.id) } returns listOf(testCalendar)
-            coEvery { calendarRepository.getEvents(testAccount.id, any()) } returns listOf(testEvent)
-            coEvery { garminConnector.sendEvents(any()) } returns true
+            coEvery { selectedEventsProvider.loadSelectedEvents() } returns
+                SelectedEventsLoadResult(events = listOf(testEvent), hasAvailableSelectedCalendars = true)
+            every { eventSerializer.buildPayload(listOf(testEvent)) } returns testPayload
+            coEvery { garminConnector.sendPayload(testPayload) } returns true
 
             val result = syncManager.performSync()
 
@@ -98,11 +108,10 @@ class SyncManagerTest {
     @Test
     fun `performSync returns WatchNotConnected when send fails`() =
         runTest {
-            coEvery { authManager.getAccounts() } returns listOf(testAccount)
-            every { calendarPreferences.selectedCalendarIds(testAccount.id) } returns flowOf(setOf("cal-1"))
-            coEvery { calendarRepository.getCalendars(testAccount.id) } returns listOf(testCalendar)
-            coEvery { calendarRepository.getEvents(testAccount.id, any()) } returns listOf(testEvent)
-            coEvery { garminConnector.sendEvents(any()) } returns false
+            coEvery { selectedEventsProvider.loadSelectedEvents() } returns
+                SelectedEventsLoadResult(events = listOf(testEvent), hasAvailableSelectedCalendars = true)
+            every { eventSerializer.buildPayload(listOf(testEvent)) } returns testPayload
+            coEvery { garminConnector.sendPayload(testPayload) } returns false
 
             val result = syncManager.performSync()
 
@@ -112,9 +121,7 @@ class SyncManagerTest {
     @Test
     fun `performSync returns Error when calendar fetch fails`() =
         runTest {
-            coEvery { authManager.getAccounts() } returns listOf(testAccount)
-            every { calendarPreferences.selectedCalendarIds(testAccount.id) } returns flowOf(setOf("cal-1"))
-            coEvery { calendarRepository.getCalendars(testAccount.id) } throws RuntimeException("Network error")
+            coEvery { selectedEventsProvider.loadSelectedEvents() } throws RuntimeException("Network error")
 
             val result = syncManager.performSync()
 
@@ -125,27 +132,14 @@ class SyncManagerTest {
     @Test
     fun `performSync only sends events for selected calendars`() =
         runTest {
-            val otherCalendar = testCalendar.copy(id = "cal-2", name = "Personal")
-            coEvery { authManager.getAccounts() } returns listOf(testAccount)
-            every { calendarPreferences.selectedCalendarIds(testAccount.id) } returns flowOf(setOf("cal-1"))
-            coEvery { calendarRepository.getCalendars(testAccount.id) } returns listOf(testCalendar, otherCalendar)
-            coEvery {
-                calendarRepository.getEvents(
-                    testAccount.id,
-                    match { calendars ->
-                        calendars.size == 1 && calendars[0].id == "cal-1"
-                    },
-                )
-            } returns listOf(testEvent)
-            coEvery { garminConnector.sendEvents(any()) } returns true
+            coEvery { selectedEventsProvider.loadSelectedEvents() } returns
+                SelectedEventsLoadResult(events = listOf(testEvent), hasAvailableSelectedCalendars = true)
+            every { eventSerializer.buildPayload(listOf(testEvent)) } returns testPayload
+            coEvery { garminConnector.sendPayload(testPayload) } returns true
 
             syncManager.performSync()
 
-            coVerify {
-                calendarRepository.getEvents(
-                    testAccount.id,
-                    match { calendars -> calendars.size == 1 && calendars[0].id == "cal-1" },
-                )
-            }
+            coVerify { selectedEventsProvider.loadSelectedEvents() }
+            coVerify { garminConnector.sendPayload(testPayload) }
         }
 }

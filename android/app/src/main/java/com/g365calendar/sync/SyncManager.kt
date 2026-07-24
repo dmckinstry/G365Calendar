@@ -8,12 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.g365calendar.auth.AuthManager
-import com.g365calendar.data.model.DisplayEvent
-import com.g365calendar.data.preferences.CalendarPreferences
-import com.g365calendar.data.repository.CalendarRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -47,61 +42,31 @@ class CalendarSyncWorker(
 class SyncManager
     @Inject
     constructor(
-        private val authManager: AuthManager,
-        private val calendarRepository: CalendarRepository,
-        private val calendarPreferences: CalendarPreferences,
+        private val selectedEventsProvider: SelectedEventsProvider,
+        private val eventSerializer: EventSerializer,
         private val garminConnector: GarminConnector,
     ) {
         /** Performs a full sync: fetches selected calendar events and sends to watch. */
         suspend fun performSync(): SyncResult {
             Timber.d("SyncManager: performing sync")
 
-            val accounts = authManager.getAccounts()
-            if (accounts.isEmpty()) {
-                return SyncResult.NoCalendarsSelected
-            }
-
-            var hasAvailableSelectedCalendars = false
-            val events = mutableListOf<DisplayEvent>()
-
-            for (account in accounts) {
-                val selectedIds = calendarPreferences.selectedCalendarIds(account.id).first()
-                if (selectedIds.isEmpty()) {
-                    continue
+            val selectedEvents =
+                try {
+                    selectedEventsProvider.loadSelectedEvents()
+                } catch (e: Exception) {
+                    Timber.e(e, "SyncManager: failed to fetch selected events")
+                    return SyncResult.Error(e.message ?: "Failed to fetch calendars")
                 }
 
-                val allCalendars =
-                    try {
-                        calendarRepository.getCalendars(account.id)
-                    } catch (e: Exception) {
-                        Timber.e(e, "SyncManager: failed to fetch calendars for account ${account.id}")
-                        return SyncResult.Error(e.message ?: "Failed to fetch calendars")
-                    }
-
-                val selectedCalendars = allCalendars.filter { it.id in selectedIds }
-                if (selectedCalendars.isEmpty()) {
-                    continue
-                }
-
-                hasAvailableSelectedCalendars = true
-
-                events += calendarRepository.getEvents(account.id, selectedCalendars)
-            }
-
-            if (!hasAvailableSelectedCalendars) {
+            if (!selectedEvents.hasAvailableSelectedCalendars) {
                 Timber.w("SyncManager: no calendars selected across any account")
                 return SyncResult.NoCalendarsSelected
             }
 
-            Timber.d("SyncManager: fetched ${events.size} events across ${accounts.size} accounts")
-
-            return sendEvents(events)
-        }
-
-        private suspend fun sendEvents(events: List<DisplayEvent>): SyncResult {
-            val sent = garminConnector.sendEvents(events)
+            val payload = eventSerializer.buildPayload(selectedEvents.events)
+            val sent = garminConnector.sendPayload(payload)
             return if (sent) {
-                SyncResult.Success(events.size)
+                SyncResult.Success(payload.eventCount)
             } else {
                 SyncResult.WatchNotConnected
             }
