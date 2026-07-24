@@ -1,5 +1,6 @@
 package com.g365calendar.ui
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -39,14 +40,23 @@ class MainActivity : ComponentActivity() {
                             composable("home") {
                                 companionHomeScreen(
                                     viewModel = mainViewModel,
-                                    onNavigateToCalendarSelection = {
-                                        navController.navigate("calendar_selection")
+                                    onNavigateToCalendarSelection = { accountId ->
+                                        navController.navigate("calendar_selection/${Uri.encode(accountId)}")
                                     },
                                 )
                             }
-                            composable("calendar_selection") {
+                            composable("calendar_selection/{accountId}") {
                                 calendarSelectionScreen(
-                                    onSave = { navController.popBackStack() },
+                                    onSave = {
+                                        val accountId =
+                                            navController.currentBackStackEntry
+                                                ?.arguments
+                                                ?.getString(CalendarSelectionViewModel.ACCOUNT_ID_ARGUMENT)
+                                        if (accountId != null) {
+                                            mainViewModel.refreshAccount(Uri.decode(accountId))
+                                        }
+                                        navController.popBackStack()
+                                    },
                                     onCancel = { navController.popBackStack() },
                                 )
                             }

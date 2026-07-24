@@ -1,6 +1,8 @@
 package com.g365calendar.ui
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.g365calendar.data.model.Calendar
 import com.g365calendar.data.preferences.CalendarPreferences
@@ -21,7 +23,12 @@ class CalendarSelectionViewModel
     constructor(
         private val calendarRepository: CalendarRepository,
         private val calendarPreferences: CalendarPreferences,
+        savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
+        private val accountId: String =
+            requireNotNull(savedStateHandle.get<String>(ACCOUNT_ID_ARGUMENT)) { "Missing account ID" }
+                .let(Uri::decode)
+
         private val _calendars = MutableStateFlow<List<Calendar>>(emptyList())
         val calendars: StateFlow<List<Calendar>> = _calendars.asStateFlow()
 
@@ -35,7 +42,7 @@ class CalendarSelectionViewModel
         val error: StateFlow<String?> = _error.asStateFlow()
 
         val selectedCalendarIds: StateFlow<Set<String>> =
-            calendarPreferences.selectedCalendarIds
+            calendarPreferences.selectedCalendarIds(accountId)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
         private var lastPersistedSelection: Set<String>? = null
@@ -62,7 +69,7 @@ class CalendarSelectionViewModel
                 _isLoading.value = true
                 _error.value = null
                 try {
-                    _calendars.value = calendarRepository.getCalendars()
+                    _calendars.value = calendarRepository.getCalendars(accountId)
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to load calendars")
                     _error.value = e.message ?: "Failed to load calendars"
@@ -81,7 +88,7 @@ class CalendarSelectionViewModel
 
         fun saveSelection(onSaved: () -> Unit) {
             viewModelScope.launch {
-                calendarPreferences.setSelectedCalendars(_draftSelectedCalendarIds.value)
+                calendarPreferences.setSelectedCalendars(accountId, _draftSelectedCalendarIds.value)
                 lastPersistedSelection = _draftSelectedCalendarIds.value
                 onSaved()
             }
@@ -89,5 +96,9 @@ class CalendarSelectionViewModel
 
         fun discardSelectionChanges() {
             _draftSelectedCalendarIds.value = selectedCalendarIds.value
+        }
+
+        companion object {
+            const val ACCOUNT_ID_ARGUMENT = "accountId"
         }
     }

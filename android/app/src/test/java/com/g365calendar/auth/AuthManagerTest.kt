@@ -2,19 +2,19 @@ package com.g365calendar.auth
 
 import com.g365calendar.BuildConfig
 import com.microsoft.identity.client.IAccount
-import com.microsoft.identity.client.ICurrentAccountResult
-import com.microsoft.identity.client.ISingleAccountPublicClientApplication
+import com.microsoft.identity.client.IMultipleAccountPublicClientApplication
+import com.microsoft.identity.client.IPublicClientApplication
 import dagger.Lazy
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class AuthManagerTest {
-    private lateinit var msalApp: ISingleAccountPublicClientApplication
+    private lateinit var msalApp: IMultipleAccountPublicClientApplication
     private lateinit var authManager: AuthManager
 
     @BeforeEach
@@ -22,31 +22,39 @@ class AuthManagerTest {
         msalApp = mockk(relaxed = true)
         authManager =
             AuthManager(
-                object : Lazy<ISingleAccountPublicClientApplication> {
-                    override fun get(): ISingleAccountPublicClientApplication = msalApp
+                object : Lazy<IMultipleAccountPublicClientApplication> {
+                    override fun get(): IMultipleAccountPublicClientApplication = msalApp
                 },
             )
     }
 
     @Test
-    fun `isSignedIn returns false when no account`() =
+    fun `getAccounts returns empty list when no account exists`() =
         runTest {
-        val accountResult = mockk<ICurrentAccountResult>()
-        every { accountResult.currentAccount } returns null
-        every { msalApp.currentAccount } returns accountResult
+            every { msalApp.getAccounts(any()) } answers {
+                firstArg<IPublicClientApplication.LoadAccountsCallback>().onTaskCompleted(emptyList())
+            }
 
-            assertFalse(authManager.isSignedIn())
+            assertTrue(authManager.getAccounts().isEmpty())
         }
 
     @Test
-    fun `isSignedIn returns true when account exists`() =
+    fun `getAccounts returns mapped account details`() =
         runTest {
-        val account = mockk<IAccount>()
-        val accountResult = mockk<ICurrentAccountResult>()
-        every { accountResult.currentAccount } returns account
-        every { msalApp.currentAccount } returns accountResult
+            val account = mockk<IAccount>()
+            every { account.id } returns "account-1"
+            every { account.username } returns "user@example.com"
+            every { account.claims } returns mapOf("name" to "Test User")
+            every { msalApp.getAccounts(any()) } answers {
+                firstArg<IPublicClientApplication.LoadAccountsCallback>().onTaskCompleted(listOf(account))
+            }
 
-            assertTrue(authManager.isSignedIn())
+            val accounts = authManager.getAccounts()
+
+            assertEquals(1, accounts.size)
+            assertEquals("account-1", accounts[0].id)
+            assertEquals("Test User", accounts[0].displayName)
+            assertEquals("user@example.com", accounts[0].username)
         }
 
     @Test

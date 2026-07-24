@@ -1,9 +1,12 @@
 package com.g365calendar.data.repository
 
 import com.g365calendar.BuildConfig
+import com.g365calendar.auth.AuthManager
 import com.g365calendar.data.api.GraphCalendarApi
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -15,13 +18,15 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 class GraphCalendarApiIntegrationTest {
+    private val testAccountId = "integration-account"
+
     @Test
     @Tag("integration")
     fun `getCalendars retrieves calendars from live microsoft graph`() =
         runBlocking {
             val repository = createRepository()
 
-            val calendars = repository.getCalendars()
+            val calendars = repository.getCalendars(testAccountId)
 
             assertFalse(calendars.isEmpty(), "Expected at least one calendar from Microsoft Graph")
             assertTrue(calendars.all { it.id.isNotBlank() }, "Expected calendar IDs to be populated")
@@ -40,10 +45,10 @@ class GraphCalendarApiIntegrationTest {
             val repository = createRepository()
 
             val calendar =
-                repository.getCalendars().firstOrNull { it.name == TARGET_CALENDAR_NAME }
+                repository.getCalendars(testAccountId).firstOrNull { it.name == TARGET_CALENDAR_NAME }
                     ?: fail("Expected to find a calendar named $TARGET_CALENDAR_NAME in Microsoft Graph")
 
-            val events = repository.getEvents(listOf(calendar))
+            val events = repository.getEvents(testAccountId, listOf(calendar))
 
             assertTrue(events.all { it.calendarName == TARGET_CALENDAR_NAME }, "Expected all events to come from $TARGET_CALENDAR_NAME")
 
@@ -54,21 +59,13 @@ class GraphCalendarApiIntegrationTest {
         }
 
     private fun createRepository(): CalendarRepository {
-        return CalendarRepository(createGraphCalendarApi(requireAccessToken()))
+            val authManager = mockk<AuthManager>()
+            coEvery { authManager.getAccessToken(testAccountId) } returns requireAccessToken()
+            return CalendarRepository(createGraphCalendarApi(), authManager)
     }
 
-    private fun createGraphCalendarApi(accessToken: String): GraphCalendarApi {
-        val client =
-            OkHttpClient.Builder()
-                .addInterceptor { chain ->
-                    val request =
-                        chain.request()
-                            .newBuilder()
-                            .header("Authorization", "Bearer $accessToken")
-                            .build()
-                    chain.proceed(request)
-                }
-                .build()
+        private fun createGraphCalendarApi(): GraphCalendarApi {
+            val client = OkHttpClient.Builder().build()
 
         val moshi =
             Moshi.Builder()

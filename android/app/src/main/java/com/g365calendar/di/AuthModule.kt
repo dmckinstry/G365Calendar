@@ -2,7 +2,7 @@ package com.g365calendar.di
 
 import android.content.Context
 import com.g365calendar.R
-import com.microsoft.identity.client.ISingleAccountPublicClientApplication
+import com.microsoft.identity.client.IMultipleAccountPublicClientApplication
 import com.microsoft.identity.client.PublicClientApplication
 import dagger.Module
 import dagger.Provides
@@ -18,8 +18,8 @@ object AuthModule {
     @Singleton
     fun provideMsalApp(
         @ApplicationContext context: Context,
-    ): ISingleAccountPublicClientApplication {
-        return PublicClientApplication.createSingleAccountPublicClientApplication(
+    ): IMultipleAccountPublicClientApplication {
+        return PublicClientApplication.createMultipleAccountPublicClientApplication(
             context,
             R.raw.msal_config,
         )

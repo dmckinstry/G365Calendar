@@ -1,5 +1,6 @@
 package com.g365calendar.data.repository
 
+import com.g365calendar.auth.AuthManager
 import com.g365calendar.data.api.GraphCalendarApi
 import com.g365calendar.data.model.Calendar
 import com.g365calendar.data.model.CalendarEvent
@@ -18,7 +19,11 @@ import org.junit.jupiter.api.Test
 
 class CalendarRepositoryTest {
     private lateinit var graphApi: GraphCalendarApi
+    private lateinit var authManager: AuthManager
     private lateinit var repository: CalendarRepository
+
+    private val testAccountId = "account-1"
+    private val testAuthorization = "Bearer token-123"
 
     private val testCalendar =
         Calendar(
@@ -45,18 +50,20 @@ class CalendarRepositoryTest {
     @BeforeEach
     fun setup() {
         graphApi = mockk()
-        repository = CalendarRepository(graphApi)
+        authManager = mockk()
+        coEvery { authManager.getAccessToken(testAccountId) } returns "token-123"
+        repository = CalendarRepository(graphApi, authManager)
     }
 
     @Test
     fun `getCalendars returns calendar list from API`() =
         runTest {
-            coEvery { graphApi.getCalendars() } returns
+            coEvery { graphApi.getCalendars(testAuthorization) } returns
                 CalendarListResponse(
                     value = listOf(testCalendar),
                 )
 
-            val result = repository.getCalendars()
+            val result = repository.getCalendars(testAccountId)
 
             assertEquals(1, result.size)
             assertEquals("Work Calendar", result[0].name)
@@ -66,10 +73,10 @@ class CalendarRepositoryTest {
     @Test
     fun `getCalendars throws on API failure`() =
         runTest {
-            coEvery { graphApi.getCalendars() } throws RuntimeException("Network error")
+            coEvery { graphApi.getCalendars(testAuthorization) } throws RuntimeException("Network error")
 
             try {
-                repository.getCalendars()
+                repository.getCalendars(testAccountId)
                 assertTrue(false, "Should have thrown")
             } catch (e: RuntimeException) {
                 assertEquals("Network error", e.message)
@@ -88,6 +95,7 @@ class CalendarRepositoryTest {
                 )
             coEvery {
                 graphApi.getCalendarEvents(
+                    authorization = testAuthorization,
                     calendarId = "cal-1",
                     startDateTime = any(),
                     endDateTime = any(),
@@ -97,7 +105,7 @@ class CalendarRepositoryTest {
                 )
             } returns EventListResponse(value = listOf(laterEvent, testEvent))
 
-            val result = repository.getEvents(listOf(testCalendar))
+            val result = repository.getEvents(testAccountId, listOf(testCalendar))
 
             assertEquals(2, result.size)
             assertEquals("Team Standup", result[0].title)
@@ -109,10 +117,10 @@ class CalendarRepositoryTest {
         runTest {
             val cancelledEvent = testEvent.copy(id = "evt-cancelled", isCancelled = true)
             coEvery {
-                graphApi.getCalendarEvents(any(), any(), any(), any(), any(), any())
+                graphApi.getCalendarEvents(any(), any(), any(), any(), any(), any(), any())
             } returns EventListResponse(value = listOf(testEvent, cancelledEvent))
 
-            val result = repository.getEvents(listOf(testCalendar))
+            val result = repository.getEvents(testAccountId, listOf(testCalendar))
 
             assertEquals(1, result.size)
             assertEquals("evt-1", result[0].id)
@@ -122,10 +130,10 @@ class CalendarRepositoryTest {
     fun `getEvents returns empty on API error for individual calendar`() =
         runTest {
             coEvery {
-                graphApi.getCalendarEvents(any(), any(), any(), any(), any(), any())
+                graphApi.getCalendarEvents(any(), any(), any(), any(), any(), any(), any())
             } throws RuntimeException("Timeout")
 
-            val result = repository.getEvents(listOf(testCalendar))
+            val result = repository.getEvents(testAccountId, listOf(testCalendar))
 
             assertTrue(result.isEmpty())
         }

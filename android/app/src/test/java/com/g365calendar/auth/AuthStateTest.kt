@@ -3,6 +3,8 @@ package com.g365calendar.auth
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,44 +18,50 @@ class AuthStateTest {
     }
 
     @Test
-    fun `initial state is Unknown`() =
+    fun `initial state is empty and idle`() =
         runTest {
             val state = authState.state.first()
-            assertTrue(state is AuthState.Status.Unknown)
+            assertTrue(state.accounts.isEmpty())
+            assertFalse(state.isLoading)
+            assertNull(state.errorMessage)
         }
 
     @Test
-    fun `setAuthenticated updates state`() =
+    fun `setAccounts updates state`() =
         runTest {
-            authState.setAuthenticated("Test User")
+            authState.setAccounts(listOf(AuthAccount(id = "account-1", displayName = "Test User", username = "user@example.com")))
+
             val state = authState.state.first()
-            assertTrue(state is AuthState.Status.Authenticated)
-            assertEquals("Test User", (state as AuthState.Status.Authenticated).displayName)
+
+            assertEquals(1, state.accounts.size)
+            assertEquals("Test User", state.accounts.first().displayName)
+            assertFalse(state.isLoading)
         }
 
     @Test
-    fun `setUnauthenticated updates state`() =
+    fun `setLoading keeps current accounts and marks loading`() =
         runTest {
-            authState.setAuthenticated("User")
-            authState.setUnauthenticated()
-            val state = authState.state.first()
-            assertTrue(state is AuthState.Status.Unauthenticated)
-        }
+            val accounts = listOf(AuthAccount(id = "account-1", displayName = "User", username = "user@example.com"))
 
-    @Test
-    fun `setLoading updates state`() =
-        runTest {
-            authState.setLoading()
+            authState.setLoading(accounts)
+
             val state = authState.state.first()
-            assertTrue(state is AuthState.Status.Loading)
+
+            assertEquals(accounts, state.accounts)
+            assertTrue(state.isLoading)
         }
 
     @Test
     fun `setError updates state with message`() =
         runTest {
-            authState.setError("Something went wrong")
+            val accounts = listOf(AuthAccount(id = "account-1", displayName = "User", username = "user@example.com"))
+
+            authState.setError("Something went wrong", accounts)
+
             val state = authState.state.first()
-            assertTrue(state is AuthState.Status.Error)
-            assertEquals("Something went wrong", (state as AuthState.Status.Error).message)
+
+            assertEquals(accounts, state.accounts)
+            assertEquals("Something went wrong", state.errorMessage)
+            assertFalse(state.isLoading)
         }
 }

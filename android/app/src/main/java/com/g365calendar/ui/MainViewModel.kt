@@ -3,6 +3,7 @@ package com.g365calendar.ui
 import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.g365calendar.auth.AuthAccount
 import com.g365calendar.auth.AuthManager
 import com.g365calendar.auth.AuthState
 import com.g365calendar.data.model.Calendar
@@ -12,15 +13,17 @@ import com.g365calendar.sync.SyncManager
 import com.g365calendar.sync.SyncResult
 import com.g365calendar.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.combine
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel
@@ -28,28 +31,32 @@ class MainViewModel
     constructor(
         private val authManager: AuthManager,
         private val authState: AuthState,
-        calendarPreferences: CalendarPreferences,
+        private val calendarPreferences: CalendarPreferences,
         private val calendarRepository: CalendarRepository,
         private val syncManager: SyncManager,
         private val syncScheduler: SyncScheduler,
     ) : ViewModel() {
         val authStatus: StateFlow<AuthState.Status> = authState.state
 
-        private val selectedCalendarIds: StateFlow<Set<String>> =
-            calendarPreferences.selectedCalendarIds
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        private val _calendarStates = MutableStateFlow<Map<String, CalendarListUiState>>(emptyMap())
+        private val _selectedCalendarIdsByAccount = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
 
-        private val _calendarState = MutableStateFlow<CalendarListUiState>(CalendarListUiState.Idle)
-        val calendarState: StateFlow<CalendarListUiState> = _calendarState.asStateFlow()
+        val accounts: StateFlow<List<AccountHomeUiState>> =
+            combine(authStatus, _calendarStates, _selectedCalendarIdsByAccount) { authStatus, calendarStates, selectedIdsByAccount ->
+                authStatus.accounts.map { account ->
+                    val calendarState = calendarStates[account.id] ?: CalendarListUiState.Idle
+                    val selectedIds = selectedIdsByAccount[account.id].orEmpty()
+                    val selectedCalendars =
+                        when (calendarState) {
+                            is CalendarListUiState.Success -> calendarState.calendars.filter { calendar -> calendar.id in selectedIds }
+                            else -> emptyList()
+                        }
 
-        val selectedCalendars: StateFlow<List<Calendar>> =
-            combine(selectedCalendarIds, authStatus, _calendarState) { selectedIds, _, calendarState ->
-                when (calendarState) {
-                    is CalendarListUiState.Success -> {
-                        calendarState.calendars
-                            .filter { calendar -> calendar.id in selectedIds }
-                    }
-                    else -> emptyList()
+                    AccountHomeUiState(
+                        account = account,
+                        selectedCalendars = selectedCalendars,
+                        calendarState = calendarState,
+                    )
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -60,53 +67,54 @@ class MainViewModel
         val lastSyncTime: StateFlow<Long?> = _lastSyncTime.asStateFlow()
 
         init {
-            checkAuthStatus()
+            refreshAccounts()
         }
 
-        private fun checkAuthStatus() {
-            viewModelScope.launch {
-                authState.setLoading()
-                val result = authManager.acquireTokenSilently()
-                if (result != null) {
-                    authState.setAuthenticated(authManager.getDisplayName(result))
-                    syncScheduler.schedulePeriodicSync()
-                    loadCalendars()
-                } else {
-                    authState.setUnauthenticated()
-                }
-            }
-        }
-
-        fun signIn(activity: Activity) {
+        fun addAccount(activity: Activity) {
             viewModelScope.launch {
                 authState.setLoading()
                 try {
-                    val result = authManager.acquireTokenInteractively(activity)
-                    authState.setAuthenticated(authManager.getDisplayName(result))
-                    syncScheduler.schedulePeriodicSync()
-                    loadCalendars()
+                    authManager.acquireTokenInteractively(activity)
+                    refreshAccounts()
                     triggerSync()
                 } catch (e: Exception) {
-                    Timber.e(e, "Sign in failed")
-                    authState.setError(e.message ?: "Sign in failed")
+                    Timber.e(e, "Add account failed")
+                    authState.setError(e.message ?: "Add account failed")
                 }
             }
         }
 
-        fun signOut() {
+        fun signOut(accountId: String) {
             viewModelScope.launch {
-                authManager.signOut()
-                authState.setUnauthenticated()
-                syncScheduler.cancelPeriodicSync()
-                _syncStatus.value = SyncUiState.Idle
-                _lastSyncTime.value = null
-                _calendarState.value = CalendarListUiState.Idle
+                val removed = authManager.removeAccount(accountId)
+                if (!removed) {
+                    authState.setError("Failed to sign out account")
+                    return@launch
+                }
+
+                calendarPreferences.clearSelectedCalendars(accountId)
+                _calendarStates.update { current -> current - accountId }
+                _selectedCalendarIdsByAccount.update { current -> current - accountId }
+
+                refreshAccounts(triggerCalendarRefresh = false)
+
+                if (authStatus.value.accounts.isEmpty()) {
+                    _syncStatus.value = SyncUiState.Idle
+                    _lastSyncTime.value = null
+                }
             }
         }
 
-        fun refreshCalendars() {
+        fun refreshCalendars(accountId: String) {
             viewModelScope.launch {
-                loadCalendars()
+                loadCalendars(accountId)
+            }
+        }
+
+        fun refreshAccount(accountId: String) {
+            viewModelScope.launch {
+                refreshSelectedCalendarIds(accountId)
+                loadCalendars(accountId)
             }
         }
 
@@ -127,17 +135,63 @@ class MainViewModel
             }
         }
 
-        private suspend fun loadCalendars() {
-            _calendarState.value = CalendarListUiState.Loading
-            _calendarState.value =
+        private fun refreshAccounts(triggerCalendarRefresh: Boolean = true) {
+            viewModelScope.launch {
+                val existingAccounts = authStatus.value.accounts
+                authState.setLoading(existingAccounts)
+
+                val accounts = authManager.getAccounts()
+                authState.setAccounts(accounts)
+
+                val accountIds = accounts.map(AuthAccount::id).toSet()
+                _calendarStates.update { current -> current.filterKeys(accountIds::contains) }
+                _selectedCalendarIdsByAccount.value =
+                    accounts.associate { account ->
+                        account.id to calendarPreferences.selectedCalendarIds(account.id).first()
+                    }
+
+                if (accounts.isEmpty()) {
+                    syncScheduler.cancelPeriodicSync()
+                    return@launch
+                }
+
+                syncScheduler.schedulePeriodicSync()
+
+                if (triggerCalendarRefresh) {
+                    accounts.forEach { account ->
+                        loadCalendars(account.id)
+                    }
+                }
+            }
+        }
+
+        private suspend fun refreshSelectedCalendarIds(accountId: String) {
+            _selectedCalendarIdsByAccount.update { current ->
+                current + (accountId to calendarPreferences.selectedCalendarIds(accountId).first())
+            }
+        }
+
+        private suspend fun loadCalendars(accountId: String) {
+            _calendarStates.update { current -> current + (accountId to CalendarListUiState.Loading) }
+
+            val calendarState =
                 try {
-                    CalendarListUiState.Success(calendarRepository.getCalendars())
+                    refreshSelectedCalendarIds(accountId)
+                    CalendarListUiState.Success(calendarRepository.getCalendars(accountId))
                 } catch (e: Exception) {
-                    Timber.e(e, "Failed to load calendars for authenticated user")
+                    Timber.e(e, "Failed to load calendars for account $accountId")
                     CalendarListUiState.Error(e.message ?: "Failed to load calendars")
                 }
+
+            _calendarStates.update { current -> current + (accountId to calendarState) }
         }
     }
+
+data class AccountHomeUiState(
+    val account: AuthAccount,
+    val selectedCalendars: List<Calendar>,
+    val calendarState: CalendarListUiState,
+)
 
 sealed class SyncUiState {
     data object Idle : SyncUiState()

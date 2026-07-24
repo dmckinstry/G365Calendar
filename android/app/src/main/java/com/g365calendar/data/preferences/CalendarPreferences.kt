@@ -20,29 +20,33 @@ class CalendarPreferences
     constructor(
         private val context: Context,
     ) {
-        companion object {
-            private val SELECTED_CALENDARS = stringSetPreferencesKey("selected_calendar_ids")
+        fun selectedCalendarIds(accountId: String): Flow<Set<String>> {
+            val key = selectedCalendarsKey(accountId)
+            return context.dataStore.data.map { prefs -> prefs[key] ?: emptySet() }
         }
 
-        val selectedCalendarIds: Flow<Set<String>> =
-            context.dataStore.data
-                .map { prefs -> prefs[SELECTED_CALENDARS] ?: emptySet() }
-
-        suspend fun setSelectedCalendars(ids: Set<String>) {
+        suspend fun setSelectedCalendars(
+            accountId: String,
+            ids: Set<String>,
+        ) {
+            val key = selectedCalendarsKey(accountId)
             context.dataStore.edit { prefs ->
-                prefs[SELECTED_CALENDARS] = ids
+                prefs[key] = ids
             }
         }
 
-        suspend fun toggleCalendar(calendarId: String) {
+        suspend fun clearSelectedCalendars(accountId: String) {
+            val key = selectedCalendarsKey(accountId)
             context.dataStore.edit { prefs ->
-                val current = prefs[SELECTED_CALENDARS] ?: emptySet()
-                prefs[SELECTED_CALENDARS] =
-                    if (calendarId in current) {
-                        current - calendarId
-                    } else {
-                        current + calendarId
-                    }
+                prefs.remove(key)
             }
+        }
+
+        private fun selectedCalendarsKey(accountId: String): Preferences.Key<Set<String>> {
+            val sanitizedAccountId =
+                accountId
+                    .map { character -> if (character.isLetterOrDigit()) character else '_' }
+                    .joinToString(separator = "")
+            return stringSetPreferencesKey("selected_calendar_ids_$sanitizedAccountId")
         }
     }

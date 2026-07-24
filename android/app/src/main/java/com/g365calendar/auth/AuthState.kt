@@ -11,34 +11,27 @@ import javax.inject.Singleton
 class AuthState
     @Inject
     constructor() {
-        private val _state = MutableStateFlow<Status>(Status.Unknown)
+        private val _state = MutableStateFlow(Status())
         val state: StateFlow<Status> = _state.asStateFlow()
 
-        fun setAuthenticated(displayName: String?) {
-            _state.value = Status.Authenticated(displayName)
+        fun setAccounts(accounts: List<AuthAccount>) {
+            _state.value = Status(accounts = accounts)
         }
 
-        fun setUnauthenticated() {
-            _state.value = Status.Unauthenticated
+        fun setLoading(accounts: List<AuthAccount> = _state.value.accounts) {
+            _state.value = Status(accounts = accounts, isLoading = true)
         }
 
-        fun setLoading() {
-            _state.value = Status.Loading
+        fun setError(
+            message: String,
+            accounts: List<AuthAccount> = _state.value.accounts,
+        ) {
+            _state.value = Status(accounts = accounts, errorMessage = message)
         }
 
-        fun setError(message: String) {
-            _state.value = Status.Error(message)
-        }
-
-        sealed class Status {
-            data object Unknown : Status()
-
-            data object Loading : Status()
-
-            data object Unauthenticated : Status()
-
-            data class Authenticated(val displayName: String?) : Status()
-
-            data class Error(val message: String) : Status()
-        }
+        data class Status(
+            val accounts: List<AuthAccount> = emptyList(),
+            val isLoading: Boolean = false,
+            val errorMessage: String? = null,
+        )
     }

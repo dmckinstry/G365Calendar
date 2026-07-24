@@ -5,9 +5,10 @@ The Android app is the companion application for G365Calendar. It authenticates 
 ## Features
 
 - Microsoft authentication via MSAL (OAuth 2.0 + PKCE)
+- Multiple-account support on the home screen, with add-account and per-account sign-out actions
 - Calendar reading from Microsoft Graph for accounts with an Exchange Online mailbox available to Graph calendar APIs
-- Calendar selection for sync with explicit Save and Cancel actions
-- Signed-in home screen summary showing the account email address and currently selected calendars
+- Account-scoped calendar selection for sync with explicit Save and Cancel actions
+- Signed-in home screen summary showing each account and its currently selected calendars
 - Background sync every 60 minutes using WorkManager
 - Jetpack Compose UI for the companion experience
 
@@ -89,13 +90,13 @@ For CI and other non-local builds, prefer `AZURE_APP_ID`, `AZURE_AUTHORITY_AUDIE
 
 ## Companion app flow
 
-After sign-in, the Android home screen shows:
+After one or more accounts are added, the Android home screen shows:
 
-- the signed-in account email address
-- the currently selected calendars, including each calendar color indicator
-- actions to open calendar selection or sign out
+- one card per signed-in account
+- the currently selected calendars for that account, including each calendar color indicator
+- actions to refresh calendars, open calendar selection, sign out the account, or add another account
 
-The Select Calendars screen loads the available calendars for the authenticated account, preselects the currently saved calendars, and only persists changes when the user taps Save. Cancel discards any in-progress checkbox changes.
+The Select Calendars screen loads the available calendars for the selected account, preselects that account's saved calendars, and only persists changes when the user taps Save. Cancel discards any in-progress checkbox changes.
 
 ## Build and test
 
@@ -124,7 +125,7 @@ The current live integration coverage verifies two Microsoft Graph paths:
 
 The event retrieval test assumes that the signed-in Microsoft 365 account exposes a calendar named `Calendar`. If that calendar does not exist for the token's user, the test fails by design.
 
-`GRAPH_ACCESS_TOKEN` is required because the integration test creates a direct Retrofit client and only adds an `Authorization: Bearer ...` header. It does not launch MSAL, open an interactive sign-in flow, or reuse a cached app session, so there is no other credential source available during the JVM test run.
+`GRAPH_ACCESS_TOKEN` is required because the integration test injects a mocked auth manager that returns the provided bearer token for the repository call path. It does not launch MSAL, open an interactive sign-in flow, or reuse a cached app session, so there is no other credential source available during the JVM test run.
 
 You can create the token using either of these Microsoft-documented flows:
 

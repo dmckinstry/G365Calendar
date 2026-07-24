@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.g365calendar.auth.AuthManager
 import com.g365calendar.data.model.DisplayEvent
 import com.g365calendar.data.preferences.CalendarPreferences
 import com.g365calendar.data.repository.CalendarRepository
@@ -46,6 +47,7 @@ class CalendarSyncWorker(
 class SyncManager
     @Inject
     constructor(
+        private val authManager: AuthManager,
         private val calendarRepository: CalendarRepository,
         private val calendarPreferences: CalendarPreferences,
         private val garminConnector: GarminConnector,
@@ -54,27 +56,44 @@ class SyncManager
         suspend fun performSync(): SyncResult {
             Timber.d("SyncManager: performing sync")
 
-            val selectedIds = calendarPreferences.selectedCalendarIds.first()
-            if (selectedIds.isEmpty()) {
-                Timber.w("SyncManager: no calendars selected")
+            val accounts = authManager.getAccounts()
+            if (accounts.isEmpty()) {
                 return SyncResult.NoCalendarsSelected
             }
 
-            val allCalendars =
-                try {
-                    calendarRepository.getCalendars()
-                } catch (e: Exception) {
-                    Timber.e(e, "SyncManager: failed to fetch calendars")
-                    return SyncResult.Error(e.message ?: "Failed to fetch calendars")
+            var hasAvailableSelectedCalendars = false
+            val events = mutableListOf<DisplayEvent>()
+
+            for (account in accounts) {
+                val selectedIds = calendarPreferences.selectedCalendarIds(account.id).first()
+                if (selectedIds.isEmpty()) {
+                    continue
                 }
 
-            val selectedCalendars = allCalendars.filter { it.id in selectedIds }
-            if (selectedCalendars.isEmpty()) {
+                val allCalendars =
+                    try {
+                        calendarRepository.getCalendars(account.id)
+                    } catch (e: Exception) {
+                        Timber.e(e, "SyncManager: failed to fetch calendars for account ${account.id}")
+                        return SyncResult.Error(e.message ?: "Failed to fetch calendars")
+                    }
+
+                val selectedCalendars = allCalendars.filter { it.id in selectedIds }
+                if (selectedCalendars.isEmpty()) {
+                    continue
+                }
+
+                hasAvailableSelectedCalendars = true
+
+                events += calendarRepository.getEvents(account.id, selectedCalendars)
+            }
+
+            if (!hasAvailableSelectedCalendars) {
+                Timber.w("SyncManager: no calendars selected across any account")
                 return SyncResult.NoCalendarsSelected
             }
 
-            val events = calendarRepository.getEvents(selectedCalendars)
-            Timber.d("SyncManager: fetched ${events.size} events from ${selectedCalendars.size} calendars")
+            Timber.d("SyncManager: fetched ${events.size} events across ${accounts.size} accounts")
 
             return sendEvents(events)
         }
