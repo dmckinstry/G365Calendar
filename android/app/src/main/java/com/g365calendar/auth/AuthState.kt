@@ -29,6 +29,10 @@ class AuthState
             _state.value = Status(accounts = accounts, errorMessage = message)
         }
 
+        fun clearError(accounts: List<AuthAccount> = _state.value.accounts) {
+            _state.value = Status(accounts = accounts)
+        }
+
         data class Status(
             val accounts: List<AuthAccount> = emptyList(),
             val isLoading: Boolean = false,

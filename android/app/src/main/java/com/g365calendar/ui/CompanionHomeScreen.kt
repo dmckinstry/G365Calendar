@@ -4,15 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -91,9 +90,11 @@ fun companionHomeScreen(
             accounts.forEach { accountState ->
                 authenticatedSection(
                     accountState = accountState,
-                    onSelectCalendars = { onNavigateToCalendarSelection(accountState.account.id) },
+                    onSelectCalendars = {
+                        viewModel.clearAuthError()
+                        onNavigateToCalendarSelection(accountState.account.id)
+                    },
                     onSignOut = { viewModel.signOut(accountState.account.id) },
-                    onRefreshCalendars = { viewModel.refreshCalendars(accountState.account.id) },
                 )
             }
 
@@ -138,73 +139,74 @@ private fun addAccountButton(viewModel: MainViewModel) {
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun authenticatedSection(
     accountState: AccountHomeUiState,
     onSelectCalendars: () -> Unit,
     onSignOut: () -> Unit,
-    onRefreshCalendars: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Signed in as", style = MaterialTheme.typography.labelMedium)
-                Text(
-                    accountState.account.displayName ?: accountState.account.username ?: "Unknown",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                accountState.account.username ?: accountState.account.displayName ?: "Unknown",
+                style = MaterialTheme.typography.bodyLarge,
+            )
 
-                when (val calendarState = accountState.calendarState) {
-                    CalendarListUiState.Idle -> {
-                        Text("Calendar list has not been loaded yet", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    CalendarListUiState.Loading -> {
-                        CircularProgressIndicator()
-                    }
-                    is CalendarListUiState.Error -> {
+            when (val calendarState = accountState.calendarState) {
+                CalendarListUiState.Idle -> {
+                    Text("Calendar list has not been loaded yet", style = MaterialTheme.typography.bodyMedium)
+                }
+                CalendarListUiState.Loading -> {
+                    CircularProgressIndicator()
+                }
+                is CalendarListUiState.Error -> {
+                    Text(
+                        text = calendarState.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                is CalendarListUiState.Success -> {
+                    if (accountState.selectedCalendars.isEmpty()) {
                         Text(
-                            text = calendarState.message,
-                            color = MaterialTheme.colorScheme.error,
+                            text = "${calendarState.calendars.size} calendars available",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                    is CalendarListUiState.Success -> {
-                        Text(
-                            text = "${calendarState.calendars.size} calendars available",
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Selected calendars", style = MaterialTheme.typography.labelMedium)
-                        if (accountState.selectedCalendars.isEmpty()) {
-                            Text("No calendars selected", style = MaterialTheme.typography.bodyLarge)
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                accountState.selectedCalendars.forEach { calendar ->
-                                    selectedCalendarRow(calendar)
-                                }
+
+                    if (accountState.selectedCalendars.isEmpty()) {
+                        Text("No calendars selected", style = MaterialTheme.typography.bodyLarge)
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            accountState.selectedCalendars.forEach { calendar ->
+                                selectedCalendarRow(calendar)
                             }
                         }
                     }
                 }
             }
-        }
 
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            OutlinedButton(onClick = onRefreshCalendars) {
-                Text("Refresh Calendars")
-            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                OutlinedButton(
+                    onClick = onSelectCalendars,
+                    modifier = Modifier.height(36.dp),
+                ) {
+                    Text("Calendars")
+                }
 
-            OutlinedButton(onClick = onSelectCalendars) {
-                Text("Select Calendars")
-            }
+                Spacer(modifier = Modifier.width(8.dp))
 
-            OutlinedButton(onClick = onSignOut) {
-                Text("Sign Out")
+                OutlinedButton(
+                    onClick = onSignOut,
+                    modifier = Modifier.height(36.dp),
+                ) {
+                    Text("Sign Out")
+                }
             }
         }
     }

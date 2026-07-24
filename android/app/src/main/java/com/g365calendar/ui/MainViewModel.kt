@@ -84,6 +84,10 @@ class MainViewModel
             }
         }
 
+        fun clearAuthError() {
+            authState.clearError(authStatus.value.accounts)
+        }
+
         fun signOut(accountId: String) {
             viewModelScope.launch {
                 val removed = authManager.removeAccount(accountId)
@@ -102,12 +106,6 @@ class MainViewModel
                     _syncStatus.value = SyncUiState.Idle
                     _lastSyncTime.value = null
                 }
-            }
-        }
-
-        fun refreshCalendars(accountId: String) {
-            viewModelScope.launch {
-                loadCalendars(accountId)
             }
         }
 
