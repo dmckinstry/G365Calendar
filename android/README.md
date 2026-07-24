@@ -5,8 +5,9 @@ The Android app is the companion application for G365Calendar. It authenticates 
 ## Features
 
 - Microsoft authentication via MSAL (OAuth 2.0 + PKCE)
-- Calendar reading from Microsoft Graph
-- Calendar selection for sync
+- Calendar reading from Microsoft Graph for accounts with an Exchange Online mailbox available to Graph calendar APIs
+- Calendar selection for sync with explicit Save and Cancel actions
+- Signed-in home screen summary showing the account email address and currently selected calendars
 - Background sync every 60 minutes using WorkManager
 - Jetpack Compose UI for the companion experience
 
@@ -22,10 +23,11 @@ The Android app is the companion application for G365Calendar. It authenticates 
 ## Azure app registration
 
 1. Open the Azure portal and create or select an app registration.
-2. Add a public client/native redirect URI of `msauth://com.g365calendar/auth`.
-3. Grant the app the `Microsoft Graph → Calendars.Read` permission.
-4. Copy the application (client) ID.
-5. Provide the client ID to the Android build using one of these inputs:
+2. Add a public client/native redirect URI for this Android package in the MSAL Android format: `msauth://com.g365calendar/<url-encoded signing-certificate-signature-hash>`.
+3. Set **Supported account types** to support both work or school accounts and personal Microsoft accounts if you want the app to sign in both.
+4. Grant the app the `Microsoft Graph → Calendars.Read` permission.
+5. Copy the application (client) ID.
+6. Provide the client ID to the Android build using one of these inputs:
    - Add `azureAppId=<your-client-id>` to `android/local.properties`
    - Add `azureAppId=<your-client-id>` to `android/gradle.properties`
    - Export `AZURE_APP_ID=<your-client-id>` before running Gradle for CI or other non-local builds
@@ -43,23 +45,57 @@ The Android build resolves calendar-read configuration in this order:
 | Purpose | Gradle or `local.properties` key | Environment variable | Default |
 | --- | --- | --- | --- |
 | Azure app registration client ID | `azureAppId` | `AZURE_APP_ID` | None; required for sign-in |
-| Azure tenant ID for single-tenant sign-in | `azureTenantId` | `AZURE_TENANT_ID` | Multi-tenant (`AzureADMultipleOrgs`) |
+| MSAL audience | `azureAuthorityAudience` | `AZURE_AUTHORITY_AUDIENCE` | `AzureADandPersonalMicrosoftAccount` |
+| Azure tenant ID for single-tenant sign-in only | `azureTenantId` | `AZURE_TENANT_ID` | Unused unless audience is `AzureADMyOrg` |
 | Microsoft Graph scopes | `graphScopes` | `GRAPH_SCOPES` | `Calendars.Read` |
 | Microsoft Graph base URL | `graphBaseUrl` | `GRAPH_BASE_URL` | `https://graph.microsoft.com/v1.0/` |
 
-When `azureTenantId` is set, the generated MSAL config switches to `AzureADMyOrg` and includes that tenant ID. Leave it unset for multi-tenant sign-in.
+Supported `azureAuthorityAudience` values:
+
+- `AzureADandPersonalMicrosoftAccount` for both Exchange Online work/school accounts and personal Microsoft accounts
+- `AzureADMultipleOrgs` for organizational accounts only
+- `AzureADMyOrg` for a single tenant; requires `azureTenantId`
+- `PersonalMicrosoftAccount` for personal Microsoft accounts only
+
+The default audience is `AzureADandPersonalMicrosoftAccount`, so the app can sign in both account types. Set `azureTenantId` only when you intentionally choose `AzureADMyOrg`.
+
+Important Microsoft Graph calendar limitation:
+
+- Personal Microsoft accounts can authenticate successfully, but `GET /me/calendars` still requires a mailbox that Microsoft Graph can access for the signed-in identity.
+- If Graph returns `MailboxNotEnabledForRESTAPI`, the account does not currently expose a mailbox that this app can read. In practice, use a Microsoft 365 work or school account with an active Exchange Online mailbox when you need calendar access.
 
 Example local development config in `android/local.properties`:
 
 ```properties
 sdk.dir=/Users/you/android-sdk
 azureAppId=YOUR_AZURE_APP_ID
-azureTenantId=YOUR_AZURE_TENANT_ID
+azureAuthorityAudience=AzureADandPersonalMicrosoftAccount
 graphScopes=Calendars.Read
 graphBaseUrl=https\://graph.microsoft.com/v1.0/
 ```
 
-For CI and other non-local builds, prefer `AZURE_APP_ID`, `AZURE_TENANT_ID`, `GRAPH_SCOPES`, and `GRAPH_BASE_URL` instead of checked-in or shared Gradle properties.
+For debug builds, the app now derives the MSAL redirect URI from the default Android debug signing certificate if you do not supply one explicitly. If you need a custom signing key or release signing, provide one of these optional inputs:
+
+- `azureRedirectUri` or `AZURE_REDIRECT_URI` for the full registered redirect URI
+- `azureRedirectSignatureHash` or `AZURE_REDIRECT_SIGNATURE_HASH` for just the base64 signing-certificate SHA-1 hash; the build will compose the final `msauth://com.g365calendar/...` URI
+
+On this machine, you can inspect the debug signing hash with:
+
+```bash
+keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore | openssl sha1 -binary | openssl base64
+```
+
+For CI and other non-local builds, prefer `AZURE_APP_ID`, `AZURE_AUTHORITY_AUDIENCE`, `AZURE_TENANT_ID`, `GRAPH_SCOPES`, and `GRAPH_BASE_URL` instead of checked-in or shared Gradle properties.
+
+## Companion app flow
+
+After sign-in, the Android home screen shows:
+
+- the signed-in account email address
+- the currently selected calendars, including each calendar color indicator
+- actions to open calendar selection or sign out
+
+The Select Calendars screen loads the available calendars for the authenticated account, preselects the currently saved calendars, and only persists changes when the user taps Save. Cancel discards any in-progress checkbox changes.
 
 ## Build and test
 

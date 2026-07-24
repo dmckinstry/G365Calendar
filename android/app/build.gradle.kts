@@ -1,4 +1,11 @@
 import java.util.Properties
+import java.net.URLEncoder
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.security.cert.X509Certificate
+import java.util.Base64
 
 plugins {
     alias(libs.plugins.android.application)
@@ -37,8 +44,55 @@ fun String.toBuildConfigString(): String =
         append('"')
     }
 
+fun File.existingFileOrNull(): File? = takeIf(File::exists)
+
+fun loadSigningCertificateSignatureHash(
+    storeFile: File,
+    storePassword: String,
+    keyAlias: String,
+): String? {
+    val keystore = KeyStore.getInstance(KeyStore.getDefaultType())
+    storeFile.inputStream().use { inputStream ->
+        keystore.load(inputStream, storePassword.toCharArray())
+    }
+
+    val certificate = keystore.getCertificate(keyAlias) as? X509Certificate ?: return null
+    val sha1 = MessageDigest.getInstance("SHA-1").digest(certificate.encoded)
+    return Base64.getEncoder().encodeToString(sha1)
+}
+
+fun buildMsalRedirectUri(
+    applicationId: String,
+    signatureHash: String,
+): String =
+    "msauth://$applicationId/${URLEncoder.encode(signatureHash, StandardCharsets.UTF_8)}"
+
+fun buildMsalManifestRedirectPath(signatureHash: String): String = "/$signatureHash"
+
 val azureAppIdProvider = configProvider("azureAppId", "AZURE_APP_ID")
 val azureTenantIdProvider = configProvider("azureTenantId", "AZURE_TENANT_ID")
+val azureAuthorityAudienceProvider =
+    configProvider("azureAuthorityAudience", "AZURE_AUTHORITY_AUDIENCE")
+        .orElse("AzureADandPersonalMicrosoftAccount")
+val azureRedirectUriProvider = configProvider("azureRedirectUri", "AZURE_REDIRECT_URI")
+val azureRedirectSignatureHashProvider =
+    configProvider("azureRedirectSignatureHash", "AZURE_REDIRECT_SIGNATURE_HASH")
+val msalAuthorityUrlProvider =
+    providers.provider {
+        val audienceType = azureAuthorityAudienceProvider.get().trim()
+        val tenantId = azureTenantIdProvider.orNull?.trim().orEmpty()
+        when (audienceType) {
+            "AzureADMyOrg" -> {
+                if (tenantId.isBlank()) {
+                    error("azureTenantId or AZURE_TENANT_ID is required when azureAuthorityAudience=AzureADMyOrg")
+                }
+                "https://login.microsoftonline.com/$tenantId/"
+            }
+            "AzureADMultipleOrgs" -> "https://login.microsoftonline.com/organizations/"
+            "PersonalMicrosoftAccount" -> "https://login.microsoftonline.com/consumers/"
+            else -> "https://login.microsoftonline.com/common/"
+        }
+    }
 val graphBaseUrlProvider =
     configProvider("graphBaseUrl", "GRAPH_BASE_URL")
         .orElse("https://graph.microsoft.com/v1.0/")
@@ -48,6 +102,57 @@ val graphScopesProvider =
 
 val msalConfigTemplate = layout.projectDirectory.file("msal_config.json.template")
 val generatedMsalResDir = layout.buildDirectory.dir("generated/res/msal")
+val applicationIdValue = "com.g365calendar"
+
+val defaultDebugSigningConfig = android.signingConfigs.getByName("debug")
+val defaultDebugSignatureHashProvider =
+    providers.provider {
+        val configuredStoreFile = defaultDebugSigningConfig.storeFile?.existingFileOrNull()
+        val fallbackStoreFile = File(System.getProperty("user.home"), ".android/debug.keystore").existingFileOrNull()
+        val storeFile = configuredStoreFile ?: fallbackStoreFile ?: return@provider null
+        val storePassword = defaultDebugSigningConfig.storePassword ?: return@provider null
+        val keyAlias = defaultDebugSigningConfig.keyAlias ?: return@provider null
+        loadSigningCertificateSignatureHash(
+            storeFile = storeFile,
+            storePassword = storePassword,
+            keyAlias = keyAlias,
+        )
+    }
+val resolvedRedirectUriProvider =
+    providers.provider {
+        val explicitRedirectUri = azureRedirectUriProvider.orNull?.trim().orEmpty()
+        if (explicitRedirectUri.isNotBlank()) {
+            explicitRedirectUri
+        } else {
+            val signatureHash =
+                azureRedirectSignatureHashProvider.orNull?.trim().orEmpty()
+                    .ifBlank { defaultDebugSignatureHashProvider.orNull.orEmpty() }
+            if (signatureHash.isBlank()) {
+                ""
+            } else {
+                buildMsalRedirectUri(applicationIdValue, signatureHash)
+            }
+        }
+    }
+val resolvedRedirectSignatureHashProvider =
+    providers.provider {
+        azureRedirectSignatureHashProvider.orNull?.trim().orEmpty()
+            .ifBlank {
+                resolvedRedirectUriProvider.orNull
+                    ?.substringAfter("msauth://$applicationIdValue/", "")
+                    ?.takeIf(String::isNotBlank)
+                        ?.let { URLDecoder.decode(it, StandardCharsets.UTF_8) }
+                    .orEmpty()
+            }
+            .ifBlank { defaultDebugSignatureHashProvider.orNull.orEmpty() }
+    }
+val redirectPathProvider =
+    providers.provider {
+        resolvedRedirectSignatureHashProvider.orNull
+            ?.takeIf(String::isNotBlank)
+            ?.let(::buildMsalManifestRedirectPath)
+            .orEmpty()
+    }
 
 val generateMsalConfig by tasks.registering {
     val outputFile = generatedMsalResDir.map { it.file("raw/msal_config.json") }
@@ -55,18 +160,33 @@ val generateMsalConfig by tasks.registering {
     inputs.file(msalConfigTemplate)
     inputs.property("azureAppId", azureAppIdProvider.orNull ?: "")
     inputs.property("azureTenantId", azureTenantIdProvider.orNull ?: "")
+    inputs.property("azureAuthorityAudience", azureAuthorityAudienceProvider.orNull ?: "")
+    inputs.property("azureRedirectUri", azureRedirectUriProvider.orNull ?: "")
+    inputs.property("azureRedirectSignatureHash", azureRedirectSignatureHashProvider.orNull ?: "")
+    inputs.property("defaultDebugSignatureHash", defaultDebugSignatureHashProvider.orNull ?: "")
+    inputs.property("resolvedRedirectSignatureHash", resolvedRedirectSignatureHashProvider.orNull ?: "")
     outputs.file(outputFile)
 
     doLast {
         val azureAppId = azureAppIdProvider.orNull?.trim().orEmpty()
         val azureTenantId = azureTenantIdProvider.orNull?.trim().orEmpty()
+        val authorityAudience = azureAuthorityAudienceProvider.get().trim()
+        val redirectUri = resolvedRedirectUriProvider.orNull.orEmpty()
         if (azureAppId.isBlank()) {
             logger.warn("Azure App ID is not configured. Set azureAppId or AZURE_APP_ID before signing in.")
         }
+        if (redirectUri.isBlank()) {
+            logger.warn(
+                "MSAL redirect URI is not configured. Set azureRedirectUri or azureRedirectSignatureHash, or use the default debug keystore before signing in.",
+            )
+        }
+        if (authorityAudience == "AzureADMyOrg" && azureTenantId.isBlank()) {
+            error("azureTenantId or AZURE_TENANT_ID is required when azureAuthorityAudience=AzureADMyOrg")
+        }
 
-        val audienceType = if (azureTenantId.isBlank()) "AzureADMultipleOrgs" else "AzureADMyOrg"
+        val audienceType = authorityAudience
         val tenantJsonLine =
-            if (azureTenantId.isBlank()) {
+            if (audienceType != "AzureADMyOrg" || azureTenantId.isBlank()) {
                 ""
             } else {
                 ",\n        \"tenant_id\": \"$azureTenantId\""
@@ -75,6 +195,7 @@ val generateMsalConfig by tasks.registering {
         val renderedConfig =
             msalConfigTemplate.asFile.readText()
                 .replace("__AZURE_APP_ID__", azureAppId.ifBlank { "YOUR_AZURE_AD_CLIENT_ID" })
+                .replace("__AZURE_REDIRECT_URI__", redirectUri.ifBlank { "msauth://com.g365calendar/YOUR_URL_ENCODED_SIGNATURE_HASH" })
                 .replace("__AZURE_AUTHORITY_AUDIENCE_TYPE__", audienceType)
                 .replace("__AZURE_TENANT_ID_JSON__", tenantJsonLine)
 
@@ -89,11 +210,15 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.g365calendar"
+        applicationId = applicationIdValue
         minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+
+        manifestPlaceholders["msalRedirectScheme"] = "msauth"
+        manifestPlaceholders["msalRedirectHost"] = applicationIdValue
+        manifestPlaceholders["msalRedirectPath"] = redirectPathProvider.get().ifBlank { "/YOUR_SIGNATURE_HASH" }
 
         buildConfigField(
             "String",
@@ -104,6 +229,16 @@ android {
             "String",
             "GRAPH_SCOPES",
             graphScopesProvider.get().toBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "MSAL_REDIRECT_URI",
+            resolvedRedirectUriProvider.get().ifBlank { "msauth://com.g365calendar/YOUR_URL_ENCODED_SIGNATURE_HASH" }.toBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "MSAL_AUTHORITY_URL",
+            msalAuthorityUrlProvider.get().toBuildConfigString(),
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

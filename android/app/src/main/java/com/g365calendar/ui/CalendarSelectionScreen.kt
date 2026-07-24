@@ -5,16 +5,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,9 +33,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.g365calendar.data.model.Calendar
 
 @Composable
-fun calendarSelectionScreen(viewModel: CalendarSelectionViewModel = hiltViewModel()) {
+fun calendarSelectionScreen(
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+    viewModel: CalendarSelectionViewModel = hiltViewModel(),
+) {
     val calendars by viewModel.calendars.collectAsState()
     val selectedIds by viewModel.selectedCalendarIds.collectAsState()
+    val draftSelectedIds by viewModel.draftSelectedCalendarIds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -39,10 +48,20 @@ fun calendarSelectionScreen(viewModel: CalendarSelectionViewModel = hiltViewMode
         viewModel.loadCalendars()
     }
 
+    LaunchedEffect(selectedIds) {
+        viewModel.initializeSelectionDraft(selectedIds)
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(
             text = "Select Calendars",
             style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp),
+        )
+
+        Text(
+            text = "${draftSelectedIds.size} selected",
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
@@ -59,13 +78,40 @@ fun calendarSelectionScreen(viewModel: CalendarSelectionViewModel = hiltViewMode
                 )
             }
             else -> {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f, fill = true),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     items(calendars, key = { it.id }) { calendar ->
                         calendarRow(
                             calendar = calendar,
-                            isSelected = calendar.id in selectedIds,
+                            isSelected = calendar.id in draftSelectedIds,
                             onToggle = { viewModel.toggleCalendar(calendar.id) },
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.discardSelectionChanges()
+                            onCancel()
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        onClick = { viewModel.saveSelection(onSave) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Save")
                     }
                 }
             }

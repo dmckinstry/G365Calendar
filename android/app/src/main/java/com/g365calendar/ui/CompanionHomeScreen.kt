@@ -3,11 +3,17 @@ package com.g365calendar.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,12 +25,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.g365calendar.auth.AuthState
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.g365calendar.data.model.Calendar
 
 @Composable
 fun companionHomeScreen(
@@ -32,11 +38,15 @@ fun companionHomeScreen(
     onNavigateToCalendarSelection: () -> Unit,
 ) {
     val authStatus by viewModel.authStatus.collectAsState()
+    val selectedCalendars by viewModel.selectedCalendars.collectAsState()
     val syncStatus by viewModel.syncStatus.collectAsState()
-    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -58,9 +68,8 @@ fun companionHomeScreen(
             is AuthState.Status.Authenticated -> {
                 authenticatedSection(
                     displayName = (authStatus as AuthState.Status.Authenticated).displayName,
+                    selectedCalendars = selectedCalendars,
                     syncStatus = syncStatus,
-                    lastSyncTime = lastSyncTime,
-                    onSync = { viewModel.triggerSync() },
                     onSelectCalendars = onNavigateToCalendarSelection,
                     onSignOut = { viewModel.signOut() },
                 )
@@ -103,9 +112,8 @@ private fun signInSection(viewModel: MainViewModel) {
 @Composable
 private fun authenticatedSection(
     displayName: String?,
+    selectedCalendars: List<Calendar>,
     syncStatus: SyncUiState,
-    lastSyncTime: Long?,
-    onSync: () -> Unit,
     onSelectCalendars: () -> Unit,
     onSignOut: () -> Unit,
 ) {
@@ -114,36 +122,17 @@ private fun authenticatedSection(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Signed in as", style = MaterialTheme.typography.labelMedium)
                 Text(displayName ?: "Unknown", style = MaterialTheme.typography.bodyLarge)
-            }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Sync Status", style = MaterialTheme.typography.labelMedium)
-                Text(
-                    text =
-                        when (syncStatus) {
-                            is SyncUiState.Idle -> "Not yet synced"
-                            is SyncUiState.Syncing -> "Syncing…"
-                            is SyncUiState.Success -> "${syncStatus.eventCount} events synced"
-                            is SyncUiState.Error -> "Error: ${syncStatus.message}"
-                        },
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                if (lastSyncTime != null) {
-                    val formatted =
-                        SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
-                            .format(Date(lastSyncTime))
-                    Text("Last sync: $formatted", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Selected calendars", style = MaterialTheme.typography.labelMedium)
+                if (selectedCalendars.isEmpty()) {
+                    Text("No calendars selected", style = MaterialTheme.typography.bodyLarge)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        selectedCalendars.forEach { calendar ->
+                            selectedCalendarRow(calendar)
+                        }
+                    }
                 }
-            }
-        }
-
-        Button(onClick = onSync, modifier = Modifier.fillMaxWidth()) {
-            if (syncStatus is SyncUiState.Syncing) {
-                CircularProgressIndicator(modifier = Modifier.height(20.dp))
-            } else {
-                Text("Sync Now")
             }
         }
 
@@ -154,5 +143,35 @@ private fun authenticatedSection(
         OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
             Text("Sign Out")
         }
+    }
+}
+
+@Composable
+private fun selectedCalendarRow(calendar: Calendar) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        val colorValue = calendar.hexColor?.let(::parseHexColor) ?: calendar.color?.let(::parseHexColor)
+        if (colorValue != null) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(colorValue),
+            )
+        }
+
+        Text(calendar.name, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+private fun parseHexColor(hex: String): Color? {
+    return try {
+        val cleaned = hex.removePrefix("#")
+        Color(android.graphics.Color.parseColor("#$cleaned"))
+    } catch (_: Exception) {
+        null
     }
 }

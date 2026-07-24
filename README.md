@@ -42,7 +42,8 @@ Garmin watch app (Monkey C / Connect IQ)
 ## Configuration notes
 
 - The Android companion generates its packaged MSAL config at build time rather than storing the Azure client ID in a checked-in resource file.
-- Android development requires `android/local.properties` for `azureAppId`, `azureTenantId`, `graphScopes`, and `graphBaseUrl` in local builds and/or `AZURE_APP_ID`, `AZURE_TENANT_ID`, `GRAPH_SCOPES`, and `GRAPH_BASE_URL` for all builds.
+- Android development uses `azureAuthorityAudience` to control whether sign-in targets organizational accounts, personal Microsoft accounts, or both; see [android/README.md](android/README.md) for the supported values and defaults.
+- Android development requires `android/local.properties` for `azureAppId`, optional `azureAuthorityAudience`, optional `azureTenantId`, `graphScopes`, and `graphBaseUrl` in local builds and/or `AZURE_APP_ID`, `AZURE_AUTHORITY_AUDIENCE`, `AZURE_TENANT_ID`, `GRAPH_SCOPES`, and `GRAPH_BASE_URL` for all builds.
 
 ## Build and test
 

@@ -4,6 +4,8 @@ import com.g365calendar.data.api.GraphCalendarApi
 import com.g365calendar.data.model.Calendar
 import com.g365calendar.data.model.CalendarEvent
 import com.g365calendar.data.model.DisplayEvent
+import okhttp3.ResponseBody
+import retrofit2.HttpException
 import timber.log.Timber
 import java.time.Instant
 import java.time.ZoneOffset
@@ -35,7 +37,7 @@ class CalendarRepository
                 graphApi.getCalendars().value
             } catch (e: Exception) {
                 Timber.e(e, "Failed to fetch calendars")
-                throw e
+                throw e.toCalendarAccessException()
             }
         }
 
@@ -76,6 +78,22 @@ class CalendarRepository
             }
         }
     }
+
+private fun Exception.toCalendarAccessException(): Exception {
+    if (this !is HttpException) {
+        return this
+    }
+
+    val errorBody = response()?.errorBody()?.string().orEmpty()
+    if (errorBody.contains("MailboxNotEnabledForRESTAPI", ignoreCase = true)) {
+        return IllegalStateException(
+            "This account does not have an Exchange Online mailbox available to Microsoft Graph calendar APIs. Sign in with a Microsoft 365 work or school account that has an active mailbox.",
+            this,
+        )
+    }
+
+    return this
+}
 
 internal fun CalendarEvent.toDisplayEvent(calendar: Calendar): DisplayEvent {
     return DisplayEvent(

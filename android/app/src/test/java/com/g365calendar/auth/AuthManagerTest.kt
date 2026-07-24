@@ -4,8 +4,10 @@ import com.g365calendar.BuildConfig
 import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.ICurrentAccountResult
 import com.microsoft.identity.client.ISingleAccountPublicClientApplication
+import dagger.Lazy
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -18,27 +20,34 @@ class AuthManagerTest {
     @BeforeEach
     fun setup() {
         msalApp = mockk(relaxed = true)
-        authManager = AuthManager(msalApp)
+        authManager =
+            AuthManager(
+                object : Lazy<ISingleAccountPublicClientApplication> {
+                    override fun get(): ISingleAccountPublicClientApplication = msalApp
+                },
+            )
     }
 
     @Test
-    fun `isSignedIn returns false when no account`() {
+    fun `isSignedIn returns false when no account`() =
+        runTest {
         val accountResult = mockk<ICurrentAccountResult>()
         every { accountResult.currentAccount } returns null
         every { msalApp.currentAccount } returns accountResult
 
-        assertFalse(authManager.isSignedIn())
-    }
+            assertFalse(authManager.isSignedIn())
+        }
 
     @Test
-    fun `isSignedIn returns true when account exists`() {
+    fun `isSignedIn returns true when account exists`() =
+        runTest {
         val account = mockk<IAccount>()
         val accountResult = mockk<ICurrentAccountResult>()
         every { accountResult.currentAccount } returns account
         every { msalApp.currentAccount } returns accountResult
 
-        assertTrue(authManager.isSignedIn())
-    }
+            assertTrue(authManager.isSignedIn())
+        }
 
     @Test
     fun `SCOPES contains Calendars Read`() {
