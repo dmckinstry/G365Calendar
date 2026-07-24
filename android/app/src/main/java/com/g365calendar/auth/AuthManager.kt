@@ -8,6 +8,7 @@ import com.microsoft.identity.client.AuthenticationCallback
 import com.microsoft.identity.client.IAuthenticationResult
 import com.microsoft.identity.client.ISingleAccountPublicClientApplication
 import com.microsoft.identity.client.exception.MsalException
+import dagger.Lazy
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import javax.inject.Inject
@@ -23,7 +24,7 @@ import kotlin.coroutines.resumeWithException
 class AuthManager
     @Inject
     constructor(
-        private val msalApp: ISingleAccountPublicClientApplication,
+        private val msalApp: Lazy<ISingleAccountPublicClientApplication>,
     ) {
         companion object {
             val SCOPES =
@@ -36,7 +37,8 @@ class AuthManager
 
         /** Attempts silent token acquisition; returns null if interactive auth is required. */
         suspend fun acquireTokenSilently(): IAuthenticationResult? {
-            val account = msalApp.currentAccount?.currentAccount ?: return null
+            val publicClientApplication = getMsalAppOrNull("silent token acquisition") ?: return null
+            val account = publicClientApplication.currentAccount?.currentAccount ?: return null
             return try {
                 suspendCancellableCoroutine { continuation ->
                     val params =
@@ -61,16 +63,20 @@ class AuthManager
                                 },
                             )
                             .build()
-                    msalApp.acquireTokenSilentAsync(params)
+                    publicClientApplication.acquireTokenSilentAsync(params)
                 }
-            } catch (e: Exception) {
-                Timber.w(e, "Silent token acquisition failed")
+            } catch (throwable: Throwable) {
+                Timber.w(throwable, "Silent token acquisition failed")
                 null
             }
         }
 
         /** Launches interactive login flow. */
         suspend fun acquireTokenInteractively(activity: Activity): IAuthenticationResult {
+            val publicClientApplication =
+                getMsalAppOrNull("interactive token acquisition")
+                    ?: throw AuthUnavailableException("Authentication is unavailable on this build")
+
             return suspendCancellableCoroutine { continuation ->
                 val params =
                     AcquireTokenParameters.Builder()
@@ -95,15 +101,16 @@ class AuthManager
                             },
                         )
                         .build()
-                msalApp.acquireToken(params)
+                publicClientApplication.acquireToken(params)
             }
         }
 
         /** Signs out the current account. */
         suspend fun signOut(): Boolean {
+            val publicClientApplication = getMsalAppOrNull("sign out") ?: return false
             return try {
                 suspendCancellableCoroutine { continuation ->
-                    msalApp.signOut(
+                    publicClientApplication.signOut(
                         object : ISingleAccountPublicClientApplication.SignOutCallback {
                             override fun onSignOut() {
                                 continuation.resume(true)
@@ -116,21 +123,33 @@ class AuthManager
                         },
                     )
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Sign out failed")
+            } catch (throwable: Throwable) {
+                Timber.e(throwable, "Sign out failed")
                 false
             }
         }
 
         /** Returns true if a cached account exists. */
         fun isSignedIn(): Boolean {
-            return msalApp.currentAccount?.currentAccount != null
+            val publicClientApplication = getMsalAppOrNull("cached account lookup") ?: return false
+            return publicClientApplication.currentAccount?.currentAccount != null
         }
 
         /** Returns the current access token, preferring silent refresh. */
         suspend fun getAccessToken(): String? {
             return acquireTokenSilently()?.accessToken
         }
+
+        private fun getMsalAppOrNull(operation: String): ISingleAccountPublicClientApplication? {
+            return try {
+                msalApp.get()
+            } catch (throwable: Throwable) {
+                Timber.e(throwable, "MSAL initialization failed during $operation")
+                null
+            }
+        }
     }
 
 class AuthCancelledException(message: String) : Exception(message)
+
+class AuthUnavailableException(message: String) : Exception(message)

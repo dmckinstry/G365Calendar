@@ -1,6 +1,7 @@
 package com.g365calendar.sync
 
 import android.content.Context
+import android.content.pm.PackageManager
 import com.garmin.android.connectiq.ConnectIQ
 import com.garmin.android.connectiq.IQApp
 import com.garmin.android.connectiq.IQDevice
@@ -29,6 +30,8 @@ class GarminConnector
         private val eventSerializer: EventSerializer,
     ) {
         companion object {
+            private const val CONNECT_MOBILE_PACKAGE = "com.garmin.android.apps.connectmobile"
+
             // Matches the application id declared in garmin/manifest.xml.
             const val WATCH_APP_ID = "7664af60b29d4f949abb291b11194419"
         }
@@ -49,6 +52,7 @@ class GarminConnector
             sdkContext: Context = context,
             autoUi: Boolean = false,
         ) {
+            val connectMobileInstalled = isConnectMobileInstalled(sdkContext)
             synchronized(lock) {
                 if (isInitialized || isInitializing) {
                     return
@@ -58,19 +62,40 @@ class GarminConnector
                 sdkReadyDeferred = CompletableDeferred()
             }
 
-            try {
-                val sdk = ConnectIQ.getInstance(sdkContext, ConnectIQ.IQConnectType.WIRELESS)
-                connectIQ = sdk
-                sdk.initialize(sdkContext, autoUi, connectIQListener)
-                Timber.d("GarminConnector initialization started")
-            } catch (e: Exception) {
+            if (!connectMobileInstalled && !autoUi) {
                 synchronized(lock) {
                     isInitializing = false
                     if (!sdkReadyDeferred.isCompleted) {
                         sdkReadyDeferred.complete(false)
                     }
                 }
-                Timber.e(e, "Failed to initialize Garmin Connect SDK")
+                Timber.w(
+                    "Skipping Garmin SDK initialization because %s is not installed (context=%s)",
+                    CONNECT_MOBILE_PACKAGE,
+                    sdkContext::class.java.simpleName,
+                )
+                return
+            }
+
+            try {
+                Timber.i(
+                    "Initializing Garmin SDK (autoUi=%s, connectMobileInstalled=%s, context=%s)",
+                    autoUi,
+                    connectMobileInstalled,
+                    sdkContext::class.java.simpleName,
+                )
+                val sdk = ConnectIQ.getInstance(sdkContext, ConnectIQ.IQConnectType.WIRELESS)
+                connectIQ = sdk
+                sdk.initialize(sdkContext, autoUi, connectIQListener)
+                Timber.d("GarminConnector initialization started")
+            } catch (throwable: Throwable) {
+                synchronized(lock) {
+                    isInitializing = false
+                    if (!sdkReadyDeferred.isCompleted) {
+                        sdkReadyDeferred.complete(false)
+                    }
+                }
+                Timber.e(throwable, "Failed to initialize Garmin Connect SDK")
             }
         }
 
@@ -196,6 +221,16 @@ class GarminConnector
 
             initialize()
             return sdkReadyDeferred.await()
+        }
+
+        private fun isConnectMobileInstalled(sdkContext: Context): Boolean {
+            return try {
+                @Suppress("DEPRECATION")
+                sdkContext.packageManager.getPackageInfo(CONNECT_MOBILE_PACKAGE, 0)
+                true
+            } catch (_: PackageManager.NameNotFoundException) {
+                false
+            }
         }
 
         private fun registerForEvents(device: IQDevice) {

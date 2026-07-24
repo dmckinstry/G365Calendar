@@ -65,9 +65,10 @@ For CI and other non-local builds, prefer `AZURE_APP_ID`, `AZURE_TENANT_ID`, `GR
 
 The Android companion now uses Garmin's Maven Central artifact
 `com.garmin.connectiq:ciq-companion-app-sdk` and initializes the SDK in
-wireless mode. When the app UI is opened, Garmin's SDK can prompt the user to
-install or upgrade Garmin Connect Mobile if required. Background sync paths
-reuse the same connector with non-UI initialization.
+wireless mode on demand during sync work instead of at process start. This
+keeps launch resilient when Garmin Connect Mobile is unavailable and produces
+clearer startup diagnostics in logcat. Background sync paths reuse the same
+connector with non-UI initialization.
 
 From the android folder, use `make` as follows:
 
