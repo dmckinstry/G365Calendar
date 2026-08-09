@@ -74,7 +74,7 @@ class MainViewModel
         val debugEventsState: StateFlow<DebugEventsUiState> = _debugEventsState.asStateFlow()
 
         init {
-            refreshAccounts()
+            refreshAccounts(triggerSyncOnReady = true)
         }
 
         fun addAccount(activity: Activity) {
@@ -116,27 +116,22 @@ class MainViewModel
             }
         }
 
-        fun refreshAccount(accountId: String) {
+        fun refreshAccount(
+            accountId: String,
+            triggerSyncAfterRefresh: Boolean = false,
+        ) {
             viewModelScope.launch {
                 refreshSelectedCalendarIds(accountId)
                 loadCalendars(accountId)
+                if (triggerSyncAfterRefresh) {
+                    triggerSyncInternal()
+                }
             }
         }
 
         fun triggerSync() {
             viewModelScope.launch {
-                _syncStatus.value = SyncUiState.Syncing
-                val result = syncManager.performSync()
-                _syncStatus.value =
-                    when (result) {
-                        is SyncResult.Success -> {
-                            _lastSyncTime.value = System.currentTimeMillis()
-                            SyncUiState.Success(result.eventCount)
-                        }
-                        is SyncResult.NoCalendarsSelected -> SyncUiState.Error("No calendars selected")
-                        is SyncResult.WatchNotConnected -> SyncUiState.Error("Watch not connected")
-                        is SyncResult.Error -> SyncUiState.Error(result.message)
-                    }
+                triggerSyncInternal()
             }
         }
 
@@ -155,7 +150,10 @@ class MainViewModel
             }
         }
 
-        private fun refreshAccounts(triggerCalendarRefresh: Boolean = true) {
+        private fun refreshAccounts(
+            triggerCalendarRefresh: Boolean = true,
+            triggerSyncOnReady: Boolean = false,
+        ) {
             viewModelScope.launch {
                 val existingAccounts = authStatus.value.accounts
                 authState.setLoading(existingAccounts)
@@ -182,7 +180,26 @@ class MainViewModel
                         loadCalendars(account.id)
                     }
                 }
+
+                if (triggerSyncOnReady) {
+                    triggerSyncInternal()
+                }
             }
+        }
+
+        private suspend fun triggerSyncInternal() {
+            _syncStatus.value = SyncUiState.Syncing
+            val result = syncManager.performSync()
+            _syncStatus.value =
+                when (result) {
+                    is SyncResult.Success -> {
+                        _lastSyncTime.value = System.currentTimeMillis()
+                        SyncUiState.Success(result.eventCount)
+                    }
+                    is SyncResult.NoCalendarsSelected -> SyncUiState.Error("No calendars selected")
+                    is SyncResult.WatchNotConnected -> SyncUiState.Error("Watch not connected")
+                    is SyncResult.Error -> SyncUiState.Error(result.message)
+                }
         }
 
         private suspend fun refreshSelectedCalendarIds(accountId: String) {

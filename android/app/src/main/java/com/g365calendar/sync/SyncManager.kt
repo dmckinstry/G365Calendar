@@ -8,7 +8,11 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -22,19 +26,43 @@ class CalendarSyncWorker(
     appContext: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
-    // Injected via Hilt WorkerFactory in production; for now uses manual lookup
     override suspend fun doWork(): Result {
         Timber.d("CalendarSyncWorker: starting sync")
         return try {
-            // The actual sync logic is delegated to SyncManager
-            // which is injected via Hilt-assisted WorkerFactory
-            Timber.d("CalendarSyncWorker: sync complete")
-            Result.success()
+            val entryPoint =
+                EntryPointAccessors.fromApplication(
+                    applicationContext,
+                    CalendarSyncWorkerEntryPoint::class.java,
+                )
+            when (val result = entryPoint.syncManager().performSync()) {
+                is SyncResult.Success -> {
+                    Timber.d("CalendarSyncWorker: synced ${result.eventCount} events")
+                    Result.success()
+                }
+                SyncResult.NoCalendarsSelected -> {
+                    Timber.d("CalendarSyncWorker: no calendars selected")
+                    Result.success()
+                }
+                SyncResult.WatchNotConnected -> {
+                    Timber.d("CalendarSyncWorker: watch not connected")
+                    Result.success()
+                }
+                is SyncResult.Error -> {
+                    Timber.w("CalendarSyncWorker: sync failed: ${result.message}")
+                    Result.retry()
+                }
+            }
         } catch (e: Exception) {
             Timber.e(e, "CalendarSyncWorker: sync failed")
             Result.retry()
         }
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface CalendarSyncWorkerEntryPoint {
+    fun syncManager(): SyncManager
 }
 
 /** Orchestrates the full sync pipeline: fetch → serialize → send to watch. */

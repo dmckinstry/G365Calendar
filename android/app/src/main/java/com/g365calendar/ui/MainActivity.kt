@@ -56,7 +56,10 @@ class MainActivity : ComponentActivity() {
                                                 ?.arguments
                                                 ?.getString(CalendarSelectionViewModel.ACCOUNT_ID_ARGUMENT)
                                         if (accountId != null) {
-                                            mainViewModel.refreshAccount(Uri.decode(accountId))
+                                            mainViewModel.refreshAccount(
+                                                Uri.decode(accountId),
+                                                triggerSyncAfterRefresh = true,
+                                            )
                                         }
                                         navController.popBackStack()
                                     },

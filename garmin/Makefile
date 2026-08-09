@@ -3,6 +3,7 @@
 GARMIN_DIR ?= .
 GARMIN_DEVICE ?= venu3
 GARMIN_DEV_KEY ?= ~/Desktop/developer_key
+GARMIN_DEBUG_PORT ?= 7381
 
 build: build-garmin
 
@@ -27,4 +28,9 @@ test-garmin:
 dev: dev-garmin
 
 dev-garmin: build-garmin
+	@if command -v adb >/dev/null 2>&1; then \
+		adb reverse tcp:$(GARMIN_DEBUG_PORT) tcp:$(GARMIN_DEBUG_PORT); \
+	else \
+		echo "adb not found; skipping Garmin debug port bridging on $(GARMIN_DEBUG_PORT)."; \
+	fi
 	connectiq && sleep 1 && monkeydo $(GARMIN_DIR)/bin/G365Calendar.prg $(GARMIN_DEVICE)

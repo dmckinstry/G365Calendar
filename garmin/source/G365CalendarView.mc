@@ -58,6 +58,8 @@ class G365CalendarView extends WatchUi.View {
     }
 
     function onUpdate(dc as Dc) as Void {
+        _events = EventStore.getEvents();
+
         if (_viewWidth != dc.getWidth() || _viewHeight != dc.getHeight()) {
             _viewWidth = dc.getWidth();
             _viewHeight = dc.getHeight();

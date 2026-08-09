@@ -12,7 +12,7 @@ class G365CalendarApp extends Application.AppBase {
     }
 
     function isDebug() as Boolean {
-        return true;
+        return false;
     }
 
     function onStart(state as Dictionary?) as Void {

@@ -1,6 +1,7 @@
 import Toybox.Application;
 import Toybox.Communications;
 import Toybox.Lang;
+import Toybox.WatchUi;
 
 //! Receives calendar event data from the Android companion app
 //! via the Garmin Connect Mobile SDK.
@@ -35,6 +36,7 @@ class CommListener extends Communications.ConnectionListener {
 
             if (eventsData != null) {
                 EventStore.parseAndStore(eventsData, syncTimestamp, eventCount);
+                WatchUi.requestUpdate();
             }
         }
     }
